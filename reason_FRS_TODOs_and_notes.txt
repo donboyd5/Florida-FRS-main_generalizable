@@ -1,0 +1,23 @@
+
+TODO:
+
+
+
+Tools:
+# regex for finding global variables:   \w+_(?=\s|$|\)|,|\;)  -- use in RStudio search box
+# MANUALLY RESET AND CLEAR ENVIRONMENT WITH Ctrl-Shift-F10 
+
+Scratch:
+
+Run E:/R_projects/projects/Florida-FRS-main_generalizable/refactor/tools/run_new_baseline_and_save_new_results.R
+# put newest commits first
+
+commit dd514d1a26a2b4471203ae77fba873428c5b6fd2 11/12/2024 passed all tests
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 159 ]
+
+commit 235e29ff512d14de3d04a0b893bc29767363baa6 9/10/2024 passed all tests
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 159 ]
+
+
+
+
