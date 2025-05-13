@@ -1,0 +1,162 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Generalizing the Reason FRS Model",
+    "section": "",
+    "text": "1 Introduction",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#links",
+    "href": "index.html#links",
+    "title": "Generalizing the Reason FRS Model",
+    "section": "1.1 links",
+    "text": "1.1 links\n\nthis project on github:\n\nmain branch – original Reason FRS project. No changes to original other than slight modifications (1) to run under Windows, and (2) to include selected tools for analyzing project code and results.\nrevised branch – changes to make it generalizable:\n\nrefactor subfolder – revised code, moving toward a generalized model\npentools subfolder – code for the pentools (pension tools) package\npendata subfolder in branch revised (TO COME)\n`penmod subfolder in branch revised (TO COME)\n\n\npenmod project web page CAUTION work in progress\noriginal pendata CAUTION work in progress\noriginal penmod CAUTION work in progress\nweb page for this project",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "TODO.html",
+    "href": "TODO.html",
+    "title": "2  TODOs",
+    "section": "",
+    "text": "make long version of workforce data",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>TODOs</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html",
+    "href": "plan.html",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "",
+    "text": "3.1 Setup to prepare for generalization\nThe ultimate goal of this part of the project is to have a generalized model using FRS data in a common consistent format (format that could be created for other plans, too) that (1) can reproduce the results of the Reason FRS model, but (2) can also be extended to other plans. See the section below on “End goal: Revamp structure into packages” for more information on this.\nAfter the Reason FRS model is generalized and can be adapted for other models, we’ll also look for improvements and extensions that will benefit modeling of other plans.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#setup-to-prepare-for-generalization",
+    "href": "plan.html#setup-to-prepare-for-generalization",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "",
+    "text": "DONE - Modify FRS to make sure it runs on Windows (change number of cores)\nDONE - Save ALL Reason results from baseline run\nDONE - Establish initial tests to see whether the model as modified reproduces Reason baseline results",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#separate-functions-from-action",
+    "href": "plan.html#separate-functions-from-action",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.2 Separate functions from action",
+    "text": "3.2 Separate functions from action\nMake sure that all files that are sourced before running the model contain only functions.\nAfter functions are sourced, load constants and then call functions to do the action.\n\nDONE - Separate “Florida FRS benefit model.R” into separate files for functions and actions\nDONE - Separate “Florida FRS funding model.R” into separate files for functions and actions\nDONE - Rename “Florida FRS workforce model.R” to “Florida FRS workforce model_functions.R” and create separate files for creating and saving workforce data, and for loading previously saved workforce data\nDONE - restructure “Florida FRS master.R” so that all functions are loaded, then constants loaded, then objects are created",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#localize-all-functions",
+    "href": "plan.html#localize-all-functions",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.3 Localize all functions",
+    "text": "3.3 Localize all functions\nMake sure all data used in functions is passed in as arguments, no reliance on global variables\n\nDONE - localize get_salary_headcount_table() function and eliminate duplicate calls\nDONE - localize get_tier()\nDONE - localize get_separation_table\nDONE - break up get_benefit_data to make localization easier\nDONE - localize get_benefit_data except for assign statements (TO BE VERIFIED 100%)\nseparate get_wf_data (in “Florida FRS workforce model_functions.R”) into smaller functions\n\nDONE - moved workforce array loop to separate function\nDONE - moved workforce array initialization to separate function\n\nlocalize workforce model functions\nTODO - get rid of all assign statements, after other files are localized",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#organize-and-isolate-constants",
+    "href": "plan.html#organize-and-isolate-constants",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.4 Organize and isolate constants",
+    "text": "3.4 Organize and isolate constants\nSeparate constants into 2 categories: (1) plan-specific constants, such as targets for calibrating a model.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#restructure-data-to-be-generalizable",
+    "href": "plan.html#restructure-data-to-be-generalizable",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.5 Restructure data to be generalizable",
+    "text": "3.5 Restructure data to be generalizable\nRewrite many functions to use stacked data frames in a common format.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#code-streamlining",
+    "href": "plan.html#code-streamlining",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.6 Code streamlining",
+    "text": "3.6 Code streamlining\nGo back and do a review of code to look for opportunities to avoid duplication.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#end-goal-revamp-structure-into-packages",
+    "href": "plan.html#end-goal-revamp-structure-into-packages",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.7 End goal: Revamp structure into packages",
+    "text": "3.7 End goal: Revamp structure into packages\nThe goal is to have 3 packages:\n\npentools – actuarial and other functions that might be needed in creating data or models\npendata – restructures indiosyncratic system-specific pension data into common, consistent formats that can be used in a pension model. - Plan-specific calibration steps should occur here. - Converting workforce data to annual data, rather than, for example, data in 5-year increments should be done here, too.\npenmodel – model that uses the data created by pendata\n\nThis will require further generalization in order to deal with as many idiosyncrasies of individual plans as possible.\nThere will be some issues to consider regarding which data should be included in pendata vs. what should be developed in penmodel. In general, pendata should have data that does not change (pretty much ever), but penmodel may develop additional data based on the raw elements in pendata. We want penmodel to be flexible enough to modify data if we consider the change to be a policy choice or an important actuarial decision. For example, pendata should have mortality tables for individual plans as well as standard actuarial tables (e.g., RP-2014), and it also should have mortality improvement scales (standard scales should as those maintained by the Society of Actuaries). However, we probably should not created improved mortality tables in pendata. Rather, penmodel should have the ability to use the mortality tables and mortality improvement scales in pendata to create improved mortality tables for a specific plan, using tools in pentools that are available to both pendata and penmodel.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#pentools-package",
+    "href": "plan.html#pentools-package",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.8 pentools package",
+    "text": "3.8 pentools package\n\nDONE - Create pentools package\nDONE - Move functions from “Florida FRS benefit model_functions.R” to pentools package",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#pendata-package",
+    "href": "plan.html#pendata-package",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.9 pendata package",
+    "text": "3.9 pendata package\n\nCreate pendata package\nConvert FRS data to stacked format\nGeneralize to other plans",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#penmodel-package",
+    "href": "plan.html#penmodel-package",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.10 penmodel package",
+    "text": "3.10 penmodel package\n\nCreate penmodel package\nMake sure it can FRS model using FRS data from pendata\nGeneralize to other plans",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "plan.html#follow-on-work",
+    "href": "plan.html#follow-on-work",
+    "title": "3  Preliminary plan for generalizing the Reason FRS Model",
+    "section": "3.11 Follow-on work",
+    "text": "3.11 Follow-on work\nOnce we have a preliminary generalized model, there will be additional steps:\n\nImproved methods, where appropriate\nAdd features so that it can be extended to other plans",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Preliminary plan for generalizing the Reason FRS Model</span>"
+    ]
+  },
+  {
+    "objectID": "stacked_table_dimensions.html",
+    "href": "stacked_table_dimensions.html",
+    "title": "4  stacked_table_dimensions",
+    "section": "",
+    "text": "4.1 Skim Stacked Tables\nCode\nht &lt;- function(df, nrecs = 6) {\n  # head-tail\n  print(utils::head(df, nrecs))\n  print(utils::tail(df, nrecs))\n}\n\n#1\nskim(frs_data_env$salary_headcount_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$salary_headc…\n\n\nNumber of rows\n329\n\n\nNumber of columns\n7\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n1\n\n\nnumeric\n6\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nentry_year\n0\n1\n2005.70\n11.47\n1975.00\n2000.00\n2010.00\n2015.00\n2020.00\n▁▂▅▇▇\n\n\nentry_age\n0\n1\n35.49\n12.04\n18.00\n25.00\n35.00\n45.00\n65.00\n▇▇▅▃▂\n\n\nage\n0\n1\n51.79\n11.85\n20.00\n42.00\n52.00\n62.00\n67.00\n▁▃▆▇▇\n\n\nyos\n0\n1\n16.30\n11.47\n2.00\n7.00\n12.00\n22.00\n47.00\n▇▇▅▂▁\n\n\ncount\n0\n1\n1880.32\n4426.77\n1.35\n7.34\n36.71\n535.09\n24932.99\n▇▁▁▁▁\n\n\nentry_salary\n0\n1\n44327.77\n29775.69\n6916.50\n24947.25\n35115.18\n49765.67\n160046.68\n▇▅▁▁▁\n\n\n\n\n\nCode\nht(frs_data_env$salary_headcount_table |&gt; \n     arrange(class, entry_year, entry_age))\n\n\n# A tibble: 6 × 7\n  entry_year entry_age   age   yos count entry_salary class\n       &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;\n1       1990        20    52    32  2.70       24963. admin\n2       1990        25    57    32  1.35       13132. admin\n3       1995        20    47    27  8.10       21644. admin\n4       1995        25    52    27  5.40       23409. admin\n5       1995        30    57    27  1.35       24176. admin\n6       2000        20    42    22  4.05       19654. admin\n# A tibble: 6 × 7\n  entry_year entry_age   age   yos  count entry_salary class  \n       &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;  \n1       2020        40    42     2 1349.        47542. special\n2       2020        45    47     2  868.        47730. special\n3       2020        50    52     2  768.        49864. special\n4       2020        55    57     2  406.        45222. special\n5       2020        60    62     2  136.        42147. special\n6       2020        65    67     2   36.9       42422. special\n\n\nCode\n#2\nskim(frs_data_env$mort_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$mort_table\n\n\nNumber of rows\n15996673\n\n\nNumber of columns\n9\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n2\n\n\nnumeric\n7\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\ntier_at_dist_age\n0\n1\n11\n17\n0\n12\n0\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nentry_year\n0\n1\n2011.00\n23.96\n1970\n1990.00\n2011.00\n2032.00\n2052\n▇▇▇▇▇\n\n\nentry_age\n0\n1\n37.94\n13.51\n18\n25.00\n35.00\n50.00\n65\n▇▇▆▅▃\n\n\ndist_year\n0\n1\n2064.81\n32.17\n1970\n2042.00\n2065.00\n2088.00\n2154\n▁▅▇▆▁\n\n\ndist_age\n0\n1\n91.75\n20.53\n18\n78.00\n95.00\n109.00\n120\n▁▁▃▆▇\n\n\nyos\n0\n1\n25.56\n18.27\n0\n10.00\n23.00\n39.00\n70\n▇▆▅▃▂\n\n\nterm_year\n0\n1\n2036.56\n30.13\n1970\n2014.00\n2037.00\n2058.00\n2122\n▃▆▇▃▁\n\n\nmort_final\n0\n1\n0.22\n0.22\n0\n0.02\n0.15\n0.41\n1\n▇▂▃▁▁\n\n\n\n\n\nCode\nht(frs_data_env$mort_table |&gt; \n     arrange(class, entry_year, entry_age, dist_year))\n\n\n# A tibble: 6 × 9\n  entry_year entry_age dist_year dist_age   yos term_year mort_final\n       &lt;int&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt; &lt;int&gt;     &lt;int&gt;      &lt;dbl&gt;\n1       1970        20      1970       20     0      1970   0.000548\n2       1970        20      1971       21     0      1970   0.000530\n3       1970        20      1971       21     1      1971   0.000530\n4       1970        20      1972       22     0      1970   0.000510\n5       1970        20      1972       22     1      1971   0.000510\n6       1970        20      1972       22     2      1972   0.000510\n# ℹ 2 more variables: tier_at_dist_age &lt;chr&gt;, class &lt;chr&gt;\n# A tibble: 6 × 9\n  entry_year entry_age dist_year dist_age   yos term_year mort_final\n       &lt;int&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt; &lt;int&gt;     &lt;int&gt;      &lt;dbl&gt;\n1       2052        65      2107      120    50      2102          1\n2       2052        65      2107      120    51      2103          1\n3       2052        65      2107      120    52      2104          1\n4       2052        65      2107      120    53      2105          1\n5       2052        65      2107      120    54      2106          1\n6       2052        65      2107      120    55      2107          1\n# ℹ 2 more variables: tier_at_dist_age &lt;chr&gt;, class &lt;chr&gt;\n\n\nCode\n#3\nskim(frs_data_env$entrant_profile_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$entrant_prof…\n\n\nNumber of rows\n62\n\n\nNumber of columns\n4\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n1\n\n\nnumeric\n3\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nentry_age\n0\n1\n42.44\n14.30\n18.00\n30.00\n42.50\n55.00\n65.00\n▆▇▇▇▇\n\n\nstart_sal\n0\n1\n56172.69\n40106.74\n12901.09\n32695.14\n40928.26\n57232.36\n160046.68\n▇▅▁▁▂\n\n\nentrant_dist\n0\n1\n0.11\n0.09\n0.00\n0.06\n0.09\n0.17\n0.42\n▇▇▃▁▁\n\n\n\n\n\nCode\nht(frs_data_env$entrant_profile_table |&gt; \n     arrange(class, entry_age))\n\n\n# A tibble: 6 × 4\n  entry_age start_sal entrant_dist class\n      &lt;dbl&gt;     &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;\n1        20    33773.       0.167  admin\n2        25    35959.       0.417  admin\n3        30    34474.       0.167  admin\n4        35    32616.       0.0833 admin\n5        45    34290.       0.167  admin\n6        30    18184.       0.125  eco  \n# A tibble: 6 × 4\n  entry_age start_sal entrant_dist class  \n      &lt;dbl&gt;     &lt;dbl&gt;        &lt;dbl&gt; &lt;chr&gt;  \n1        40    47542.      0.0547  special\n2        45    47730.      0.0352  special\n3        50    49864.      0.0311  special\n4        55    45222.      0.0164  special\n5        60    42147.      0.00551 special\n6        65    42422.      0.00150 special\n\n\nCode\n#4\nskim(frs_data_env$mort_retire_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$mort_retire_…\n\n\nNumber of rows\n23247\n\n\nNumber of columns\n5\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n1\n\n\nnumeric\n4\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nbase_age\n0\n1\n66.67\n19.21\n40\n50.00\n63.00\n80.00\n120\n▇▆▅▂▁\n\n\nage\n0\n1\n93.33\n19.21\n40\n80.00\n97.00\n110.00\n120\n▁▃▅▆▇\n\n\nyear\n0\n1\n2048.67\n19.21\n2022\n2032.00\n2045.00\n2062.00\n2102\n▇▆▅▂▁\n\n\nmort_final\n0\n1\n0.24\n0.22\n0\n0.03\n0.19\n0.44\n1\n▇▃▅▁▁\n\n\n\n\n\nCode\nht(frs_data_env$mort_retire_table |&gt; \n     arrange(class, base_age, age, year))\n\n\n# A tibble: 6 × 5\n  base_age   age  year mort_final class\n     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;\n1       40    40  2022   0.000703 admin\n2       40    41  2023   0.000726 admin\n3       40    42  2024   0.000746 admin\n4       40    43  2025   0.000767 admin\n5       40    44  2026   0.000792 admin\n6       40    45  2027   0.00143  admin\n# A tibble: 6 × 5\n  base_age   age  year mort_final class  \n     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;  \n1      118   118  2022        0.5 special\n2      118   119  2023        0.5 special\n3      118   120  2024        1   special\n4      119   119  2022        0.5 special\n5      119   120  2023        1   special\n6      120   120  2022        1   special\n\n\nCode\n#5\nskim(frs_data_env$normal_retire_rate_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$normal_retir…\n\n\nNumber of rows\n504\n\n\nNumber of columns\n4\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n2\n\n\nnumeric\n2\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\ntier\n0\n1\n6\n6\n0\n2\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nage\n0\n1\n62.50\n10.40\n45\n53.75\n62.50\n71.25\n80\n▇▇▇▇▇\n\n\nnormal_retire_rate\n0\n1\n0.26\n0.29\n0\n0.06\n0.17\n0.21\n1\n▇▁▁▁▁\n\n\n\n\n\nCode\nht(frs_data_env$normal_retire_rate_table |&gt; \n     arrange(class, tier, age))\n\n\n# A tibble: 6 × 4\n    age normal_retire_rate class tier  \n  &lt;dbl&gt;              &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; \n1    45              0.17  admin tier_1\n2    46              0.17  admin tier_1\n3    47              0.17  admin tier_1\n4    48              0.195 admin tier_1\n5    49              0.195 admin tier_1\n6    50              0.195 admin tier_1\n# A tibble: 6 × 4\n    age normal_retire_rate class   tier  \n  &lt;dbl&gt;              &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt; \n1    75                  1 special tier_2\n2    76                  1 special tier_2\n3    77                  1 special tier_2\n4    78                  1 special tier_2\n5    79                  1 special tier_2\n6    80                  1 special tier_2\n\n\nCode\n#6\nskim(frs_data_env$early_retire_rate_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$early_retire…\n\n\nNumber of rows\n385\n\n\nNumber of columns\n4\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n2\n\n\nnumeric\n2\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\ntier\n0\n1\n6\n6\n0\n2\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nage\n0\n1\n66.71\n8.01\n52\n60.00\n67.00\n74.00\n80\n▆▇▇▇▇\n\n\nearly_retire_rate\n0\n1\n0.21\n0.32\n0\n0.05\n0.12\n0.14\n1\n▇▁▁▁▂\n\n\n\n\n\nCode\nht(frs_data_env$early_retire_rate_table |&gt; \n     arrange(class, tier, age))\n\n\n# A tibble: 6 × 4\n    age early_retire_rate class tier  \n  &lt;dbl&gt;             &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; \n1    52              0    admin tier_1\n2    53              0.05 admin tier_1\n3    54              0.05 admin tier_1\n4    55              0.05 admin tier_1\n5    56              0.05 admin tier_1\n6    57              0.05 admin tier_1\n# A tibble: 6 × 4\n    age early_retire_rate class   tier  \n  &lt;dbl&gt;             &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt; \n1    75                 1 special tier_2\n2    76                 1 special tier_2\n3    77                 1 special tier_2\n4    78                 1 special tier_2\n5    79                 1 special tier_2\n6    80                 1 special tier_2\n\n\nCode\n#7\nskim(frs_data_env$separation_rate_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$separation_r…\n\n\nNumber of rows\n362212\n\n\nNumber of columns\n9\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n1\n\n\nnumeric\n8\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nentry_year\n0\n1\n2011.00\n23.96\n1970\n1990.00\n2011.00\n2032.00\n2052.0\n▇▇▇▇▇\n\n\nentry_age\n0\n1\n40.88\n14.23\n18\n30.00\n40.00\n55.00\n65.0\n▇▇▇▆▆\n\n\nterm_age\n0\n1\n74.66\n23.48\n18\n57.00\n75.00\n93.00\n120.0\n▂▅▇▇▅\n\n\nyos\n0\n1\n33.78\n19.97\n0\n17.00\n34.00\n51.00\n70.0\n▇▇▇▇▆\n\n\nterm_year\n0\n1\n2044.78\n31.19\n1970\n2022.00\n2045.00\n2067.00\n2122.0\n▂▆▇▅▂\n\n\nseparation_rate\n0\n1\n0.52\n0.46\n0\n0.06\n0.28\n1.00\n1.0\n▇▁▁▁▇\n\n\nremaining_prob\n0\n1\n0.18\n0.27\n0\n0.00\n0.01\n0.31\n1.0\n▇▂▁▁▁\n\n\nseparation_prob\n0\n1\n0.01\n0.04\n0\n0.00\n0.00\n0.01\n0.6\n▇▁▁▁▁\n\n\n\n\n\nCode\nht(frs_data_env$separation_rate_table |&gt; \n     arrange(class, entry_year, entry_age, term_age))\n\n\n# A tibble: 6 × 9\n  entry_year entry_age term_age   yos term_year separation_rate remaining_prob\n       &lt;int&gt;     &lt;int&gt;    &lt;dbl&gt; &lt;dbl&gt;     &lt;int&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1       1970        20       20     0      1970          0.208           1    \n2       1970        20       21     1      1971          0.118           0.792\n3       1970        20       22     2      1972          0.095           0.699\n4       1970        20       23     3      1973          0.075           0.633\n5       1970        20       24     4      1974          0.065           0.585\n6       1970        20       25     5      1975          0.0575          0.547\n# ℹ 2 more variables: separation_prob &lt;dbl&gt;, class &lt;chr&gt;\n# A tibble: 6 × 9\n  entry_year entry_age term_age   yos term_year separation_rate remaining_prob\n       &lt;int&gt;     &lt;int&gt;    &lt;dbl&gt; &lt;dbl&gt;     &lt;int&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1       2052        65      115    50      2102               1              0\n2       2052        65      116    51      2103               1              0\n3       2052        65      117    52      2104               1              0\n4       2052        65      118    53      2105               1              0\n5       2052        65      119    54      2106               1              0\n6       2052        65      120    55      2107               1              0\n# ℹ 2 more variables: separation_prob &lt;dbl&gt;, class &lt;chr&gt;\n\n\nCode\n#8\nskim(frs_data_env$salary_growth_table)\n\n\n\nData summary\n\n\nName\nfrs_data_env$salary_growt…\n\n\nNumber of rows\n497\n\n\nNumber of columns\n3\n\n\n_______________________\n\n\n\nColumn type frequency:\n\n\n\ncharacter\n1\n\n\nnumeric\n2\n\n\n________________________\n\n\n\nGroup variables\nNone\n\n\n\nVariable type: character\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmin\nmax\nempty\nn_unique\nwhitespace\n\n\n\n\nclass\n0\n1\n3\n17\n0\n7\n0\n\n\n\nVariable type: numeric\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nskim_variable\nn_missing\ncomplete_rate\nmean\nsd\np0\np25\np50\np75\np100\nhist\n\n\n\n\nyos\n0\n1\n35.0\n20.51\n0\n17.00\n35.00\n53.00\n70.00\n▇▇▇▇▇\n\n\ncumprod_salary_increase\n0\n1\n5.4\n4.70\n1\n1.99\n3.86\n7.35\n29.19\n▇▂▁▁▁\n\n\n\n\n\nCode\nht(frs_data_env$salary_growth_table |&gt; \n     arrange(class, yos))\n\n\n# A tibble: 6 × 3\n    yos class cumprod_salary_increase\n  &lt;dbl&gt; &lt;chr&gt;                   &lt;dbl&gt;\n1     0 admin                    1   \n2     1 admin                    1.04\n3     2 admin                    1.08\n4     3 admin                    1.12\n5     4 admin                    1.16\n6     5 admin                    1.20\n# A tibble: 6 × 3\n    yos class   cumprod_salary_increase\n  &lt;dbl&gt; &lt;chr&gt;                     &lt;dbl&gt;\n1    65 special                    23.1\n2    66 special                    24.2\n3    67 special                    25.4\n4    68 special                    26.6\n5    69 special                    27.9\n6    70 special                    29.2\n\n\nCode\n#Appendix\nfrs_data_env$dimensions_table\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTable Name\nEmployee Classes\nAge Values\nYOS Values\nEntry Years\nEntry Ages\nDistribution Years\nDistribution Ages\nTermination Years\nBase Ages\nYears\nTermination Ages\nTotal Rows\nproduct_all_dims\n\n\n\n\nsalary_headcount_table\n7\n11\n10\n10\n11\n\n\n\n\n\n\n\n\n\n\n\n\n329\n84,700\n\n\nentrant_profile_table\n7\n\n\n\n\n\n\n11\n\n\n\n\n\n\n\n\n\n\n\n\n62\n77\n\n\nmort_table\n7\n\n\n71\n83\n11\n185\n103\n153\n\n\n\n\n\n\n15996673\n1,322,901,625,815\n\n\nmort_retire_table\n7\n81\n\n\n\n\n\n\n\n\n\n\n\n\n81\n81\n\n\n23247\n3,720,087\n\n\nnormal_retire_rate_table\n7\n36\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n504\n252\n\n\nearly_retire_rate_table\n7\n29\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n385\n203\n\n\nseparation_rate_table\n7\n\n\n71\n83\n11\n\n\n\n\n153\n\n\n\n\n103\n362212\n7,150,819,599\n\n\nsalary_growth_table\n7\n\n\n71\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n497\n497",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>stacked_table_dimensions</span>"
+    ]
+  }
+]
