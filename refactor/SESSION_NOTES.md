@@ -19,10 +19,15 @@ See [`OPEN_ISSUES.md`](OPEN_ISSUES.md) for a tracked list of architectural decis
 design questions that are deferred while penmodel-only changes are in progress. Key items:
 
 1. Dollar unit convention in pendata (`benefits` in retirees is in thousands — needs resolution)
-2. Grouped-to-point-value expansion utility (general solution for age/yos band expansion)
-3. Hardcoded 80+ sub-band weights in retirees adapter (remove when adapter is removed)
-4. Class name inconsistency in `amortization_bases` ("senior management" vs "senior_management")
-5. Salary growth rate error yos=7 regular (tracked in upstream issue #6)
+2. Single-year data format — pendata's responsibility (merged from old issues 2 & 3):
+   - **Architecture**: penmodel assumes all data is in single-year-of-age / single-year-of-service,
+     no gaps. Converting grouped AV data to single-year is **pendata's job**, not penmodel's.
+   - The conversion is an optimization problem: hit all known targets (group sums, total sums,
+     group averages for salary, etc.) while staying close to a plausible actuarial distribution.
+     Simple uniform distribution within bands is often wrong.
+   - **Deferred**: any change here will break test equality; wait until model structure is stable.
+3. Class name inconsistency in `amortization_bases` ("senior management" vs "senior_management")
+4. Salary growth rate error yos=7 regular (tracked in upstream issue #6)
 
 ---
 
