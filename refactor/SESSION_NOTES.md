@@ -5,10 +5,24 @@
 
 ---
 
-## Naming Convention
+## Naming Convention and Key Terms
 
 - **pendata** — the R package/project at `D:\R_projects\pendata` that stores all FRS input data
 - **penmodel** — short name for this repo (`Florida-FRS-main_generalizable`), the pension model itself
+- **AV** — Actuarial Valuation, the annual report produced by the plan's actuary (Milliman for FRS).
+  All FRS source data traces back to the AV. When a file or table cites "AV2022" it means the
+  July 1, 2022 actuarial valuation.
+
+## Open Issues / Design Questions
+
+See [`OPEN_ISSUES.md`](OPEN_ISSUES.md) for a tracked list of architectural decisions and
+design questions that are deferred while penmodel-only changes are in progress. Key items:
+
+1. Dollar unit convention in pendata (`benefits` in retirees is in thousands — needs resolution)
+2. Grouped-to-point-value expansion utility (general solution for age/yos band expansion)
+3. Hardcoded 80+ sub-band weights in retirees adapter (remove when adapter is removed)
+4. Class name inconsistency in `amortization_bases` ("senior management" vs "senior_management")
+5. Salary growth rate error yos=7 regular (tracked in upstream issue #6)
 
 ---
 
