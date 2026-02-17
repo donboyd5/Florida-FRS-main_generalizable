@@ -19,26 +19,31 @@ See [`OPEN_ISSUES.md`](OPEN_ISSUES.md) for a tracked list of architectural decis
 design questions that are deferred while penmodel-only changes are in progress. Key items:
 
 1. Dollar unit convention in pendata (`benefits` in retirees is in thousands — needs resolution)
-2. Single-year data format — pendata's responsibility (merged from old issues 2 & 3):
-   - **Architecture**: penmodel assumes all data is in single-year-of-age / single-year-of-service,
-     no gaps. Converting grouped AV data to single-year is **pendata's job**, not penmodel's.
-   - The conversion is an optimization problem: hit all known targets (group sums, total sums,
-     group averages for salary, etc.) while staying close to a plausible actuarial distribution.
-     Simple uniform distribution within bands is often wrong.
-   - **Deferred**: any change here will break test equality; wait until model structure is stable.
+2. Single-year data format — pendata's responsibility (merged from old issues 2 & 3)
 3. Class name inconsistency in `amortization_bases` ("senior management" vs "senior_management")
 4. Salary growth rate error yos=7 regular (tracked in upstream issue #6)
+5. **`benefit_rules` data quality in pendata** (discovered Week 3, see OPEN_ISSUES.md for full details):
+   - tier_2 multipliers incomplete/wrong for regular, admin, special classes
+   - tier_3 missing entirely for all 7 classes
+   - tier_1 has slight overlap-join discrepancy (~8.8e-6 relative); needs sentinel fix review
 
 ---
 
 ## Quick Resume Guide
 
 **If starting a new Claude session**, read these files in order:
-1. This file (SESSION_NOTES.md) - current status
-2. `pension_model_analysis.qmd` - overall plan and architecture
-3. `data_structure_mapping_VERIFIED.md` - Week 1 results
+1. This file (SESSION_NOTES.md) - current status and all key findings
+2. `OPEN_ISSUES.md` - deferred issues and pendata data quality problems
+3. `pension_model_analysis.qmd` - overall plan and architecture (if deeper context needed)
+4. `data_structure_mapping_VERIFIED.md` - Week 1 results (reference only)
 
-Then say: *"I understand we're at [STATUS]. Ready to proceed with [NEXT TASK]."*
+**Current state (2026-02-17 end of session)**:
+- 160/160 tests pass
+- Week 2 Tier 1 (3 tables) + Week 3 Tier 2 (4 computed tables) migrated
+- `ben_mult_lookup` migration blocked on pendata data quality (see OPEN_ISSUES #5)
+- Next: fix pendata `benefit_rules`, then investigate `tier_table` in pendata
+
+Then say: *"I see we're at Week 3, 160/160 tests pass. The next priority is fixing pendata's benefit_rules (tier_2/tier_3 completeness) to unblock ben_mult_lookup migration."*
 
 ---
 
@@ -202,8 +207,6 @@ This preserves exact backward compatibility during the refactor.
 
 ---
 
----
-
 ## Important Context
 
 ### Decisions Made:
@@ -220,21 +223,21 @@ This preserves exact backward compatibility during the refactor.
 ```
 refactor/
 ├── R/
-│   ├── FRS_new_workflow.R                        # Main orchestrator
-│   ├── FRS_benefit_model_functions.R             # Benefit calculations
-│   ├── FRS_benefit_model_get_and_save_bendata.R  # Benefit data prep ⚠️ Week 3
+│   ├── FRS_new_workflow.R                        # Main orchestrator (Tier 1+2 migration wired here)
+│   ├── FRS_helper_functions.R                    # All adapter/builder functions (Week 2-3 work)
+│   ├── FRS_benefit_model_functions.R             # Benefit calcs (slice_max fix added Week 3)
+│   ├── FRS_benefit_model_get_and_save_bendata.R  # Benefit data prep
 │   ├── FRS_workforce_model_functions_V3.R        # Workforce projection
-│   ├── FRS_workforce_model_get_and_save_wfdata_GC_s.R  # Workforce data prep ⚠️ Week 3
+│   ├── FRS_workforce_model_get_and_save_wfdata_GC_s.R  # Workforce data prep
 │   ├── FRS_liability_model_functions.R           # AAL calculations
-│   ├── FRS_liability_model_get_and_save_liabdata.R  # Liability data prep ⚠️ Week 3
+│   ├── FRS_liability_model_get_and_save_liabdata.R  # Liability data prep
 │   ├── FRS_funding_amort.R                       # Amortization
 │   ├── FRS_funding_model_functions_loop_without_drop_V5.R  # Funding calcs
 │   └── FRS_funding_model_functions_drop_only.R   # DROP module
+├── OPEN_ISSUES.md                                # Tracked design issues / pendata gaps
 ├── pension_model_analysis.qmd                    # Master plan
 ├── data_structure_mapping_VERIFIED.md            # Week 1 results
 └── SESSION_NOTES.md                              # This file
-
-⚠️ = Files to modify in Week 3
 ```
 
 ### External Dependencies:
@@ -242,9 +245,14 @@ refactor/
 - **pendata** (D:\R_projects\pendata): Source of FRS data
   - Contains `data/frs.rda` with params_env (188 objects)
   - Has both legacy and better structures
-  - ⚠️ **Segfault risk in non-interactive Rscript**: Loading `pendata::frs$params_env` triggers
-    loading of `mort_table` (16M rows), which segfaults in Rscript. Use `load()` directly:
-    `load('D:/R_projects/pendata/data/frs.rda')` then access `frs$params_env$<element>`.
+  - ⚠️ **Segfault risk in non-interactive Rscript**: BOTH `pendata::frs$params_env` AND
+    `load('D:/R_projects/pendata/data/frs.rda')` segfault in non-interactive R because
+    the full object contains `mort_table` (16M rows) which causes a crash.
+  - ✅ **Safe alternatives for diagnostics**:
+    - Staged individual files: `readRDS("D:/R_projects/pendata/data-raw/plans/frs/staged_data/<table>.rds")`
+    - Gang's legacy env: `load("D:/R_projects/pendata/data-raw/gang/frs_data_env_bf_cal.RData")`
+      (gives `frs_data_env` with legacy lookup tables — safe, loads quickly)
+  - Key staged files available: `benefit_rules.rds`, `constants_assumptions_tbl.rds`, etc.
 
 - **pentools** (GitHub: gchen3/pentools): Actuarial functions
   - 19 general-purpose functions
@@ -253,9 +261,11 @@ refactor/
 - **Personal R library path**: `C:/Users/Don-business/R/win-library/4.5`
   - NOT the default R library path — packages installed here by the user
   - Must set with `.libPaths('C:/Users/Don-business/R/win-library/4.5')` before loading packages
-  - When running Rscript: use `Rscript --vanilla -e ".libPaths('C:/Users/Don-business/R/win-library/4.5'); source('...')"` or
-    `.libPaths()` as the very first line of the script
-  - This applies to all R scripts in this project (FRS_new_workflow.R, diagnostic scripts, etc.)
+  - FRS_new_workflow.R has `.libPaths()` as line 2 — already handled
+  - ⚠️ Using `Rscript --vanilla` SEGFAULTS when loading tidyverse (avoids .Rprofile entirely).
+    Use `Rscript` WITHOUT `--vanilla` so .Rprofile loads the library path OR add `.libPaths()` as
+    first line of the script (as done in FRS_new_workflow.R)
+  - For diagnostic scripts: write to a .R file and run `Rscript <file>` (NOT `-e "..."` with multiline)
 
 ---
 
@@ -263,16 +273,18 @@ refactor/
 
 ### If I (Claude) need to resume:
 
-1. Read SESSION_NOTES.md (this file)
-2. Read pension_model_analysis.qmd for full context
-3. Check git log for recent commits
-4. Say: "I see Week 2 is complete (3 Tier 1 tables migrated, 160/160 tests pass). Ready to start Week 3 — Tier 2 migration of `benefit_rules` and `retirement_rates`."
+1. Read SESSION_NOTES.md (this file) — most important, has all key context
+2. Read OPEN_ISSUES.md — see which issues are blocking and what pendata needs
+3. Check `git log --oneline -10` for recent changes
+4. Say: "I see we're at Week 3, 160/160 tests pass, 4/5 Tier 2 tables migrated.
+   The blocking issue is pendata benefit_rules data quality (OPEN_ISSUES #5).
+   Next step is to fix benefit_rules in pendata for all tiers."
 
 ### If you (User) need to resume after a break:
 
-1. Check this file for current status
-2. Review data_structure_mapping_VERIFIED.md for Week 1 results
-3. Tell me: "Let's continue with Week 3" or "Remind me where we are"
+1. Read this file for current status
+2. Check OPEN_ISSUES.md for the benefit_rules pendata data quality issues
+3. Tell me: "Let's continue" — I'll pick up from where we left off
 
 ---
 
@@ -296,21 +308,21 @@ git push origin rebuild-test
 
 ## Quick Reference: Better Structures
 
-| Better Structure | Rows | Replaces | Ready? |
-|------------------|------|----------|--------|
-| `headcount_salary` | 847 | salary_headcount_table | ✅ |
-| `benefit_rules` | 89 | 6 lookup tables | ✅ |
-| `constants_assumptions_tbl` | 122 | 60+ scalars | ✅ |
-| `salarygrowth` | 217 | salary_growth_table | ✅ |
-| `withdrawal` | 2,982 | separation_rate_table | ✅ |
-| `retirees` | 16 | retiree_distribution | ✅ |
-| `amortization_bases` | 235 | current_amort_layers | ✅ |
-| `retirement_rates` | 1,326 | 10+ retirement tables | ✅ |
-| `return_scenarios` | 100 | return_scenarios (already good) | ✅ |
-| `db_dc_legacy_table` | 21 | (already good) | ✅ |
-| `db_dc_new_table` | 14 | (already good) | ✅ |
+| Better Structure | Rows | Replaces | Migration Status |
+|------------------|------|----------|-----------------|
+| `headcount_salary` | 847 | salary_headcount_table | ⏸ Deferred |
+| `benefit_rules` | 89 | ben_mult_lookup | ⚠️ Data quality issues (see OPEN_ISSUES #5) |
+| `constants_assumptions_tbl` | 122 | 60+ scalars | ✅ Used for 4 computed tables |
+| `salarygrowth` | 217 | salary_growth_table | ✅ Done (Tier 1) |
+| `withdrawal` | 2,982 | separation_rate_table | ⏸ Deferred |
+| `retirees` | 16 | retiree_distribution | ✅ Done (Tier 1) |
+| `amortization_bases` | 235 | current_amort_layers | ✅ Done (Tier 1) |
+| `retirement_rates` | 1,326 | 10+ retirement tables | ⏸ Not started |
+| `return_scenarios` | 100 | return_scenarios (already good) | — |
+| `db_dc_legacy_table` | 21 | (already good) | — |
+| `db_dc_new_table` | 14 | (already good) | — |
 
-**Total**: 70+ legacy objects → 11 better structures (85% reduction!)
+**Total**: 70+ legacy objects → 11 better structures (85% reduction target)
 
 ---
 
@@ -336,16 +348,35 @@ git push origin rebuild-test
 
 1. **Model architecture**: See pension_model_analysis.qmd sections 4-7
 2. **Data structures**: See data_structure_mapping_VERIFIED.md
-3. **Better structures**: Load and inspect: `load('D:/R_projects/pendata/data/frs.rda')`
+3. **Better structures**: Use staged files (NOT frs.rda — segfault risk!):
+   - `readRDS("D:/R_projects/pendata/data-raw/plans/frs/staged_data/<table>.rds")`
+   - For legacy comparison: `load("D:/R_projects/pendata/data-raw/gang/frs_data_env_bf_cal.RData")`
 4. **pendata source**: D:\R_projects\pendata
 5. **This repo**: D:\R_projects\Florida-FRS-main_generalizable
 
 ---
 
-**Last session end**: 2026-02-16 (Week 2 complete)
-**Next session start**: Week 3 - Tier 2 migration (benefit_rules, retirement_rates) or remaining Tier 1 adapters
+**Last session end**: 2026-02-17 (Week 3 Tier 2 migration partially complete)
 **Status**: ✅ 160/160 tests pass. All work committed and documented.
+**Git branch**: rebuild-test
+**Last commit**: `99d14a9` — "Tier 2: build 4 computed lookup tables from pendata constants (160/160 pass)"
 
 ### pendata changes: NONE
-pendata was not modified at any point. It retains the correct salary growth rate (0.045)
-at yos=7 for the regular class. The backward-compat patch lives entirely in this repo.
+pendata was not modified at any point. The backward-compat patches live entirely in this repo.
+Data quality issues found in pendata benefit_rules are documented in OPEN_ISSUES.md #5.
+
+### Summary of all adapter/builder functions in FRS_helper_functions.R:
+
+| Function | Purpose | Status |
+|----------|---------|--------|
+| `get_constant(tbl, name)` | Look up typed value from constants_assumptions_tbl | ✅ Active |
+| `validate_better_structure()` | Schema validation helper | ✅ Active |
+| `get_better_table_name()` | Legacy → better structure name map | ✅ Active |
+| `convert_salarygrowth_to_legacy()` | salarygrowth → salary_growth_table | ✅ Active (Tier 1) |
+| `convert_amortization_to_legacy()` | amortization_bases → current_amort_layers | ✅ Active (Tier 1) |
+| `convert_retirees_to_legacy()` | retirees → retiree_distribution | ✅ Active (Tier 1) |
+| `convert_benefit_rules_to_legacy()` | benefit_rules → ben_mult_lookup | ⚠️ Written, not active (pendata data quality) |
+| `build_dr_lookup()` | constants → dr_lookup | ✅ Active (Tier 2) |
+| `build_fas_period_lookup()` | plan provision → fas_period_lookup | ✅ Active (Tier 2) |
+| `build_reduce_factor_lookup()` | plan provisions → reduce_factor_lookup | ✅ Active (Tier 2) |
+| `build_cola_lookup()` | constants → cola_lookup | ✅ Active (Tier 2) |
