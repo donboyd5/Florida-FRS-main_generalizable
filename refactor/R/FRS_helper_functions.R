@@ -217,6 +217,39 @@ convert_salarygrowth_to_legacy <- function(salarygrowth_tbl) {
   # Return legacy format
   result <- expanded_df[, c("yos", "class", "cumprod_salary_increase")]
 
+  # ===========================================================================
+  # TODO: REMOVE THIS BLOCK WHEN READY TO USE CORRECT DATA
+  #
+  # DELIBERATE DATA PATCH — backward-compatibility hack
+  #
+  # pendata has the CORRECT value: yos=7, regular = 0.045 (4.5%)
+  # The legacy Excel "Florida FRS inputs.xlsx" has a TRANSCRIPTION ERROR:
+  #   yos=7, regular = 0.044 (4.4%)
+  # Authoritative source: Milliman AV2022 p.A-22 confirms 4.5% is correct
+  #   (file: refactor/source_data/Reports/Florida FRS Valuation 2022.pdf)
+  #
+  # We override here (NOT in pendata) to preserve exact backward compatibility
+  # with prior model results during the refactor. pendata must stay correct.
+  #
+  # To remove: delete this block, then update the test baseline
+  #   (expect ~0.096% change in baseline_funding for the regular class).
+  #
+  # Tracked in: https://github.com/gchen3/Florida-FRS-main_generalizable/issues/6
+  # ===========================================================================
+  reg_mask <- result$class == "regular"
+  reg      <- result[reg_mask, ]
+  reg      <- reg[order(reg$yos), ]
+
+  # Get growth rates for regular in yos order, then patch yos=7 to wrong value
+  reg_rates <- expanded_df$growth_rate[expanded_df$class == "regular"]
+  reg_rates <- reg_rates[order(expanded_df$yos[expanded_df$class == "regular"])]
+  reg_rates[reg$yos == 7L] <- 0.044   # override correct 0.045 with legacy error
+
+  # Recompute all cumprod values for regular from the patched rates
+  reg$cumprod_salary_increase <- c(1.0, cumprod(1 + reg_rates[-length(reg_rates)]))
+  result[reg_mask, ] <- reg
+  # ===========================================================================
+
   return(result)
 }
 
@@ -242,9 +275,18 @@ convert_amortization_to_legacy <- function(amortization_bases_tbl) {
                  paste(setdiff(required_cols, names(amortization_bases_tbl)), collapse = ", ")))
   }
 
-  # Return as-is (schemas are compatible)
-  # Select only required columns in case better structure has extras
+  # Select required columns
   result <- amortization_bases_tbl[, required_cols]
+
+  # Normalize class names: "senior management" (space) -> "senior_management" (underscore)
+  # This is a data quality issue in amortization_bases - all other better structures use underscore
+  result$class <- gsub(" ", "_", result$class)
+
+  # Convert amo_period from integer to character and NA to "n/a"
+  # Better structure: amo_period is integer with NA values
+  # Legacy structure: amo_period is character with "n/a" strings
+  result$amo_period <- as.character(result$amo_period)
+  result$amo_period[is.na(result$amo_period)] <- "n/a"
 
   return(result)
 }

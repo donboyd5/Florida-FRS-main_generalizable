@@ -1,7 +1,7 @@
 # Session Notes - FRS Pension Model Rationalization
 
-**Last Updated**: 2026-02-16 (Week 2 IN PROGRESS)
-**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration STARTED (2 tables migrated)
+**Last Updated**: 2026-02-16 (Week 2 COMPLETE ✓)
+**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration COMPLETE ✓ (160/160 tests pass)
 
 ---
 
@@ -45,53 +45,74 @@ Then say: *"I understand we're at [STATUS]. Ready to proceed with [NEXT TASK]."*
 
 ---
 
-## Week 2 Progress: Tier 1 Migration (IN PROGRESS)
+## Week 2: Tier 1 Migration — COMPLETE ✓
 
 ### What We Accomplished (2026-02-16):
 
-1. ✅ **Created helper functions** ([FRS_helper_functions.R](refactor/R/FRS_helper_functions.R)):
+1. ✅ **Created helper functions** ([FRS_helper_functions.R](R/FRS_helper_functions.R)):
    - `get_constant()` - Access constants from constants_assumptions_tbl
    - `validate_better_structure()` - Schema validation
    - `get_better_table_name()` - Map legacy to better structure names
 
 2. ✅ **Created adapter functions (Option A approach)**:
    - `convert_salarygrowth_to_legacy()` - Converts range-based salary growth to cumulative products
-   - `convert_amortization_to_legacy()` - Simple pass-through for amortization
+   - `convert_amortization_to_legacy()` - Handles type/class-name normalization for amortization
 
-3. ✅ **Migrated 2 Tier 1 tables successfully**:
+3. ✅ **Migrated 2 Tier 1 tables**:
    - ✅ `salary_growth_table` ← `salarygrowth` (better structure)
    - ✅ `current_amort_layers_table` ← `amortization_bases` (better structure)
 
-4. ✅ **Integrated adapters into workflow**:
-   - Modified [FRS_new_workflow.R](refactor/R/FRS_new_workflow.R) to load helpers and apply adapters
-   - Tested workflow loads correctly with adapters
+4. ✅ **Integrated adapters into workflow** ([FRS_new_workflow.R](R/FRS_new_workflow.R))
 
-5. ✅ **Testing & validation**:
-   - Created [test_adapters.R](refactor/R/test_adapters.R) - Validates adapter output matches legacy format
-   - Created [test_workflow_tier1.R](refactor/R/test_workflow_tier1.R) - Tests workflow integration
-   - Created [compare_legacy_better_schemas.R](refactor/R/compare_legacy_better_schemas.R) - Schema comparison tool
+5. ✅ **Full model run: 160/160 tests pass** — exact match with legacy baseline
 
-### Key Discovery:
+6. ✅ **Data discrepancy investigated and resolved** (see below)
 
-**Better structures are NOT drop-in replacements!**
+### Key Discovery: Better structures are NOT drop-in replacements
+
 - Better structures use **range-based** age/yos (age_lb/ub, yos_lb/ub)
 - Legacy uses **point values** (age, yos)
 - Better structures often lack year-based columns (entry_year, term_year)
-- **Solution**: Adapter functions convert better → legacy format (Option A approach)
+- **Solution**: Adapter functions convert better → legacy format (Option A)
 
-### Remaining Tier 1 Tasks:
+### Bugs Fixed in Adapters
 
-**Complex adapters (deferred for later)**:
-- [ ] `salary_headcount_table` → `headcount_salary` (needs entry_year generation + range expansion)
-- [ ] `separation_rate_table` → `withdrawal` (362K rows → 3K rows, complex transformation)
-- [ ] `retiree_distribution` → `retirees` (simpler, could attempt next)
+| Bug | Symptom | Fix |
+|-----|---------|-----|
+| `cumprod` off-by-one | cumprod=1.037 at yos=0 instead of 1.0 | `c(1.0, cumprod(1+rates[-length(rates)]))` |
+| `amo_period` type mismatch | integer vs character "n/a" | `as.character()` + NA→"n/a" |
+| Class name `"senior management"` | 0 rows matched for senior_management | `gsub(" ", "_", result$class)` |
 
-**Testing**:
-- [ ] Test full model run end-to-end with 2 migrated tables
-- [ ] Compare outputs to baseline
-- [ ] Document any discrepancies
+### Data Discrepancy: salary growth yos=7 regular (IMPORTANT)
 
-**Estimated remaining time**: 2-3 days for complex adapters, 1 day for testing
+**Summary**: A transcription error exists in the legacy input file. pendata has the correct value.
+
+| Source | yos=7 Regular | Status |
+|--------|---------------|--------|
+| Milliman AV2022 p.A-22 (authoritative PDF) | **0.045** | ✅ Correct |
+| `frs_extracted_data_v6.xlsm` → pendata `salarygrowth` | **0.045** | ✅ Correct |
+| `Florida FRS inputs.xlsx` sheet "Salary Growth" | **0.044** | ❌ Transcription error |
+
+**Authoritative source**: `refactor/source_data/Reports/Florida FRS Valuation 2022.pdf`, page A-22
+(Table: "Individual Member Salary Increase Assumptions, Based on 2.40% inflation assumption")
+
+**Resolution**: In `convert_salarygrowth_to_legacy()`, a deliberate backward-compat patch
+overrides the correct pendata value (0.045) with the legacy error (0.044) at yos=7, regular class.
+This preserves exact backward compatibility during the refactor.
+
+- The patch has a prominent 15-line TODO comment block with issue reference
+- **pendata was NOT modified** — it retains the correct value (0.045)
+- Tracked in: **https://github.com/gchen3/Florida-FRS-main_generalizable/issues/6**
+- To remove eventually: delete the TODO block in `convert_salarygrowth_to_legacy()`,
+  then update the test baseline (~0.096% change in `baseline_funding` for regular class)
+
+### Remaining Tier 1 Tables (deferred — not blocking)
+
+| Table | Better Structure | Complexity | Notes |
+|-------|-----------------|------------|-------|
+| `salary_headcount_table` | `headcount_salary` | High | Needs entry_year generation + range expansion |
+| `separation_rate_table` | `withdrawal` | High | 362K→3K row inversion, complex |
+| `retiree_distribution` | `retirees` | Medium | Simpler, could attempt next |
 
 ---
 
@@ -119,6 +140,7 @@ Migrate complex benefit rules and retirement rates
 3. **Backward compatibility**: Yes, unless errors found
 4. **Data source**: pendata only
 5. **Performance**: Get generality right, then optimize
+6. **User preference**: When presenting choices, use letter identifiers (A, B, ...) for easy response
 
 ### Key Files in This Repo:
 
@@ -237,6 +259,10 @@ git push origin rebuild-test
 
 ---
 
-**Last session end**: 2026-02-16 (Week 1 complete)
-**Next session start**: Week 2 - Tier 1 migration
-**Status**: ✅ All work documented and ready to resume
+**Last session end**: 2026-02-16 (Week 2 complete)
+**Next session start**: Week 3 - Tier 2 migration (benefit_rules, retirement_rates) or remaining Tier 1 adapters
+**Status**: ✅ 160/160 tests pass. All work committed and documented.
+
+### pendata changes: NONE
+pendata was not modified at any point. It retains the correct salary growth rate (0.045)
+at yos=7 for the regular class. The backward-compat patch lives entirely in this repo.
