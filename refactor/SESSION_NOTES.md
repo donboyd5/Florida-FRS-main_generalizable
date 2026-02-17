@@ -113,13 +113,21 @@ This preserves exact backward compatibility during the refactor.
 - To remove eventually: delete the TODO block in `convert_salarygrowth_to_legacy()`,
   then update the test baseline (~0.096% change in `baseline_funding` for regular class)
 
-### Remaining Tier 1 Tables (deferred — not blocking)
+### Tier 1 Table Migration Status
 
-| Table | Better Structure | Complexity | Notes |
-|-------|-----------------|------------|-------|
-| `salary_headcount_table` | `headcount_salary` | High | Needs entry_year generation + range expansion |
-| `separation_rate_table` | `withdrawal` | High | 362K→3K row inversion, complex |
-| `retiree_distribution` | `retirees` | Medium | Simpler, could attempt next |
+| Table | Better Structure | Status | Notes |
+|-------|-----------------|--------|-------|
+| `salary_growth_table` | `salarygrowth` | ✅ Done | Backward-compat patch for yos=7 (issue #6) |
+| `current_amort_layers_table` | `amortization_bases` | ✅ Done | Type + class-name fixes |
+| `retiree_distribution` | `retirees` | ✅ Done | 80+ band split weights hardcoded |
+| `salary_headcount_table` | `headcount_salary` | ⏸ Deferred | Needs entry_year generation + range expansion |
+| `separation_rate_table` | `withdrawal` | ⏸ Deferred | 362K→3K row inversion, complex |
+
+#### retirees adapter key notes:
+- Better structure has 2 types (disability, normearly) combined into one total per age band
+- `benefits` column in better structure is in **thousands of dollars** (×1000 for legacy)
+- "Under 50" band (age_lb=18) maps to **ages 45–49 only** (legacy minimum retiree age = 45)
+- "80 & Up" band splits into 5 legacy sub-bands with **hardcoded weights**: 80-84=50%, 85-89=25%, 90-94=12.5%, 95-99=2.5%, 100-120=10%
 
 ---
 

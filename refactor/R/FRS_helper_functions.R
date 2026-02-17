@@ -254,6 +254,111 @@ convert_salarygrowth_to_legacy <- function(salarygrowth_tbl) {
 }
 
 
+#' Convert retirees (better) to retiree_distribution (legacy)
+#'
+#' Transforms range-based retiree counts/benefits to age-point ratios.
+#'
+#' @param retirees_tbl Better structure with columns: type, age_lb, age_ub, count, benefits
+#'
+#' @return Legacy format with columns: age, n_retire, total_ben, avg_ben,
+#'   n_retire_ratio, total_ben_ratio
+#'
+#' @details
+#' The better structure has:
+#'   - Two types (disability, normearly) combined here into totals
+#'   - Range-based age bands (age_lb/age_ub)
+#'   - Raw counts and benefits (benefits in thousands of dollars)
+#'
+#' The legacy structure needs:
+#'   - One row per age (45-120)
+#'   - n_retire and total_ben for each age (repeated within each band)
+#'   - Ratio columns: n_retire_ratio and total_ben_ratio (each sum to 1)
+#'
+#' Hard-coded assumptions required (not derivable from better structure alone):
+#'   1. Minimum retiree age = 45 (the "Under 50" band maps to ages 45-49)
+#'   2. The "80 & Up" band is split into 5 legacy sub-bands using fixed weights:
+#'      80-84: 50%, 85-89: 25%, 90-94: 12.5%, 95-99: 2.5%, 100-120: 10%
+#'      These weights reproduce the original retiree_distribution exactly.
+#'
+convert_retirees_to_legacy <- function(retirees_tbl) {
+  # Validate input
+  required_cols <- c("type", "age_lb", "age_ub", "count", "benefits")
+  if (!all(required_cols %in% names(retirees_tbl))) {
+    stop(sprintf("retirees_tbl missing columns: %s",
+                 paste(setdiff(required_cols, names(retirees_tbl)), collapse = ", ")))
+  }
+
+  # Step 1: Sum disability + normearly by age band; convert benefits thousands -> dollars
+  combined <- aggregate(
+    cbind(n_retire_band = count, total_ben_band = benefits) ~ age_lb + age_ub,
+    data = retirees_tbl,
+    FUN = sum
+  )
+  combined$total_ben_band <- combined$total_ben_band * 1000  # thousands -> dollars
+  combined <- combined[order(combined$age_lb), ]
+
+  # Step 2: Expand each age band to individual age rows
+  # "Under 50" (age_lb=18, age_ub=49) -> ages 45-49 only (matches legacy minimum age of 45)
+  # 50-79 bands -> expand evenly across all ages in band
+  # "80 & Up" (age_lb=80, age_ub=120) -> split into 5 legacy sub-bands with fixed weights:
+  #   These weights (50/25/12.5/2.5/10%) are intrinsic to the legacy model and cannot
+  #   be derived from the better structure's single "80 & Up" bucket.
+  sub_band_80plus <- list(
+    list(ages = 80:84,   weight = 0.500),
+    list(ages = 85:89,   weight = 0.250),
+    list(ages = 90:94,   weight = 0.125),
+    list(ages = 95:99,   weight = 0.025),
+    list(ages = 100:120, weight = 0.100)
+  )
+
+  expanded <- lapply(seq_len(nrow(combined)), function(i) {
+    lb            <- combined$age_lb[i]
+    ub            <- combined$age_ub[i]
+    n_total       <- combined$n_retire_band[i]
+    ben_total     <- combined$total_ben_band[i]
+
+    if (lb >= 80) {
+      # "80 & Up" band: apply legacy sub-band weights
+      rows <- lapply(sub_band_80plus, function(sb) {
+        n <- length(sb$ages)
+        data.frame(
+          age      = sb$ages,
+          n_retire = rep(n_total * sb$weight / n, n),
+          total_ben = rep(ben_total * sb$weight / n, n),
+          stringsAsFactors = FALSE
+        )
+      })
+      do.call(rbind, rows)
+    } else {
+      # All other bands: distribute evenly across ages
+      # "Under 50" (lb=18) -> use 45:ub to match legacy minimum age of 45
+      age_start <- max(lb, 45L)
+      ages      <- age_start:ub
+      n         <- length(ages)
+      data.frame(
+        age       = ages,
+        n_retire  = rep(n_total / n, n),
+        total_ben = rep(ben_total / n, n),
+        stringsAsFactors = FALSE
+      )
+    }
+  })
+
+  expanded_df <- do.call(rbind, expanded)
+  expanded_df <- expanded_df[order(expanded_df$age), ]
+
+  # Step 3: Derived columns
+  expanded_df$avg_ben         <- expanded_df$total_ben / expanded_df$n_retire
+  expanded_df$n_retire_ratio  <- expanded_df$n_retire  / sum(expanded_df$n_retire)
+  expanded_df$total_ben_ratio <- expanded_df$total_ben / sum(expanded_df$total_ben)
+
+  result <- expanded_df[, c("age", "n_retire", "total_ben", "avg_ben",
+                             "n_retire_ratio", "total_ben_ratio")]
+  rownames(result) <- NULL
+  return(tibble::as_tibble(result))
+}
+
+
 #' Convert amortization_bases (better) to current_amort_layers_table (legacy)
 #'
 #' The schemas are nearly identical, so this is mostly a direct pass-through.
@@ -280,7 +385,7 @@ convert_amortization_to_legacy <- function(amortization_bases_tbl) {
 
   # Normalize class names: "senior management" (space) -> "senior_management" (underscore)
   # This is a data quality issue in amortization_bases - all other better structures use underscore
-  result$class <- gsub(" ", "_", result$class)
+  result$class <- gsub(" ", "_", result$class, fixed = TRUE)
 
   # Convert amo_period from integer to character and NA to "n/a"
   # Better structure: amo_period is integer with NA values

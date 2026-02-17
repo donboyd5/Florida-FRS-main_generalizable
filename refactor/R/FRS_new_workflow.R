@@ -31,9 +31,11 @@ source(fs::path(rdir, "FRS_helper_functions.R"))
 
 # Apply adapters to convert better structures to legacy format
 # This allows existing functions to work unchanged while using better pendata internally
-params$salary_growth_table <- convert_salarygrowth_to_legacy(params$salarygrowth)
-
+params$salary_growth_table  <- convert_salarygrowth_to_legacy(params$salarygrowth)
 message("  ✓ Migrated salary_growth_table from better structure 'salarygrowth'")
+
+params$retiree_distribution <- convert_retirees_to_legacy(params$retirees)
+message("  ✓ Migrated retiree_distribution from better structure 'retirees'")
 
 # --- Benefit model helpers ----------------------------------------------------
 message("sourcing FRS_benefit_model_helper_functions and data function...")
