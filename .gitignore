@@ -83,3 +83,12 @@ reason_results/reason_workspace.RData
 djb/~$benefit_rules.xlsx
 
 .RDataTmp3
+
+# Scratch/investigation scripts created during refactor work
+# These serve their purpose during a session but are not permanent artifacts
+refactor/R/check_*.R
+refactor/R/compare_*.R
+refactor/R/debug_*.R
+refactor/R/read_*.R
+refactor/R/test_patch.R
+nul

@@ -5,6 +5,13 @@
 
 ---
 
+## Naming Convention
+
+- **pendata** — the R package/project at `D:\R_projects\pendata` that stores all FRS input data
+- **penmodel** — short name for this repo (`Florida-FRS-main_generalizable`), the pension model itself
+
+---
+
 ## Quick Resume Guide
 
 **If starting a new Claude session**, read these files in order:
