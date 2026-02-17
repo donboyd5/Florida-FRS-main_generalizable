@@ -96,7 +96,7 @@ get_benefit_table_s <- function(ann_factor_table_s,
     left_join(salary_benefit_table_s,
               by = c("entry_year", "entry_age", "yos", "term_age", "class")) %>%
     left_join(params$ben_mult_lookup %>% select(-system),
-              by = join_by(class, 
+              by = join_by(class,
                            tier_at_dist_age,
                            dist_age >= dist_age_min_ge,
                            dist_age < dist_age_max_lt,
@@ -104,6 +104,11 @@ get_benefit_table_s <- function(ann_factor_table_s,
                            yos < yos_max_lt,
                            dist_year >= dist_year_min_ge,
                            dist_year < dist_year_max_lt)) %>%
+    # benefit_rules allows overlapping conditions (resolved by max benmult, matching
+    # pendata's benmult_lookup() semantics). One row per member state is required.
+    dplyr::slice_max(ben_mult, with_ties = FALSE,
+                     by = c(class, entry_year, entry_age, yos, dist_age, dist_year,
+                            tier_at_dist_age)) %>%
     left_join(params$reduce_factor_lookup,
               by = c("tier_at_dist_age", "dist_age", "class")) %>%
     mutate(db_benefit = yos * ben_mult * fas * reduce_factor,

@@ -1,7 +1,7 @@
 # Session Notes - FRS Pension Model Rationalization
 
-**Last Updated**: 2026-02-16 (Week 2 COMPLETE ✓)
-**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration COMPLETE ✓ (160/160 tests pass)
+**Last Updated**: 2026-02-17 (Week 3 Tier 2 Migration COMPLETE ✓)
+**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration COMPLETE ✓ | Week 3 Partial: 4/5 Tier 2 tables migrated (160/160 tests pass)
 
 ---
 
@@ -151,18 +151,56 @@ This preserves exact backward compatibility during the refactor.
 
 ---
 
-## Week 3 Preview: Tier 2 Migration
+## Week 3: Tier 2 Migration — PARTIALLY COMPLETE ✓
 
-### Goal:
-Migrate complex benefit rules and retirement rates
+### What We Accomplished (2026-02-17):
 
-**Tasks**:
-- [ ] Migrate `benefit_rules` (consolidates 6 lookups)
-- [ ] Migrate `retirement_rates` (consolidates 10+ tables)
-- [ ] Remove tier string parsing
-- [ ] Keep mortality as legacy (documented)
+1. ✅ **Written `convert_benefit_rules_to_legacy()` adapter** in FRS_helper_functions.R
+   - Expands non-early tiers to 3 status suffixes (_norm, _vested, _non_vested)
+   - Converts sentinel values (model max → 9999 for unbounded ranges)
+   - slice_max fix in `get_benefit_table_s` for overlapping benefit_rules conditions
 
-**Estimated time**: 5-7 days
+2. ✅ **Built 4 computed lookup tables from pendata constants** (all 160 tests pass):
+   - `dr_lookup` ← `constants_assumptions_tbl` (dr_current_, dr_new_)
+   - `fas_period_lookup` ← plan provisions (tier_1=5yr, others=8yr)
+   - `reduce_factor_lookup` ← plan provisions with _norm→1, _early→formula, _vested/_non_vested→NA
+   - `cola_lookup` ← `constants_assumptions_tbl` (4 COLA constants)
+
+3. ⚠️ **ben_mult_lookup: deferred** — `benefit_rules` in pendata has data quality issues:
+   - tier_1: slight join-overlap discrepancy (8.8e-6 relative difference)
+   - tier_2: wrong/incomplete multipliers for regular/admin/special classes
+   - tier_3: missing entirely for all 7 classes
+   - Currently using full legacy ben_mult_lookup unchanged (adapter code is ready)
+   - See OPEN_ISSUES.md #5 for full details
+
+4. ✅ **Documented all pendata data quality issues** in OPEN_ISSUES.md
+
+5. ✅ **160/160 tests pass** with all Tier 2 changes
+
+### Key Discovery: Rscript Execution Requirements
+
+- **Personal library path**: `C:/Users/Don-business/R/win-library/4.5`
+- `--vanilla` flag causes segfaults when loading packages (avoids .Rprofile)
+- Use `Rscript` without `--vanilla` and ensure .Rprofile sets library path
+- For standalone scripts: add `.libPaths("C:/Users/Don-business/R/win-library/4.5")` as first line
+- **SEGFAULT RISK**: Loading `pendata::frs$params_env` in non-interactive R segfaults (16M-row mort_table). Use `load("D:/R_projects/pendata/data/frs.rda")` ONLY loads the full object — also segfaults! Use staged files: `readRDS("D:/R_projects/pendata/data-raw/plans/frs/staged_data/benefit_rules.rds")` or Gang's `load("D:/R_projects/pendata/data-raw/gang/frs_data_env_bf_cal.RData")` instead.
+
+### Tier 2 Table Migration Status
+
+| Table | Better Structure | Status | Notes |
+|-------|-----------------|--------|-------|
+| `dr_lookup` | `constants_assumptions_tbl` | ✅ Done | Pure formula; 0 mismatches |
+| `fas_period_lookup` | Plan provision | ✅ Done | tier_1=5yr, others=8yr |
+| `reduce_factor_lookup` | Plan provisions | ✅ Done | _norm→1, _early→formula, _vested/_non_vested→NA |
+| `cola_lookup` | `constants_assumptions_tbl` | ✅ Done | 4 COLA constants, 0 mismatches |
+| `ben_mult_lookup` | `benefit_rules` | ⚠️ Deferred | pendata data quality issues (see OPEN_ISSUES #5) |
+
+### Week 4 Preview:
+- Fix pendata `benefit_rules` data quality issues (tier_2 completeness, tier_3 missing)
+- Then activate `convert_benefit_rules_to_legacy()` adapter in FRS_new_workflow.R
+- Investigate `tier_table` (the 6th remaining legacy lookup) — trace data source in pendata
+
+---
 
 ---
 
@@ -204,10 +242,20 @@ refactor/
 - **pendata** (D:\R_projects\pendata): Source of FRS data
   - Contains `data/frs.rda` with params_env (188 objects)
   - Has both legacy and better structures
+  - ⚠️ **Segfault risk in non-interactive Rscript**: Loading `pendata::frs$params_env` triggers
+    loading of `mort_table` (16M rows), which segfaults in Rscript. Use `load()` directly:
+    `load('D:/R_projects/pendata/data/frs.rda')` then access `frs$params_env$<element>`.
 
 - **pentools** (GitHub: gchen3/pentools): Actuarial functions
   - 19 general-purpose functions
   - No FRS-specific logic
+
+- **Personal R library path**: `C:/Users/Don-business/R/win-library/4.5`
+  - NOT the default R library path — packages installed here by the user
+  - Must set with `.libPaths('C:/Users/Don-business/R/win-library/4.5')` before loading packages
+  - When running Rscript: use `Rscript --vanilla -e ".libPaths('C:/Users/Don-business/R/win-library/4.5'); source('...')"` or
+    `.libPaths()` as the very first line of the script
+  - This applies to all R scripts in this project (FRS_new_workflow.R, diagnostic scripts, etc.)
 
 ---
 

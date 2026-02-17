@@ -89,7 +89,9 @@ djb/~$benefit_rules.xlsx
 refactor/R/check_*.R
 refactor/R/compare_*.R
 refactor/R/debug_*.R
+refactor/R/diag_*.R
 refactor/R/explore_*.R
 refactor/R/read_*.R
+refactor/R/scratch_*.R
 refactor/R/test_*.R
 nul

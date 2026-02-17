@@ -3,37 +3,36 @@
 
 #' Get Constant from constants_assumptions_tbl
 #'
-#' Extracts a single constant value from the constants_assumptions_tbl by variable name.
-#' This function replaces direct access to individual params$ scalar values.
+#' Extracts a single constant value from the constants_assumptions_tbl by variable name,
+#' returning a properly typed value (numeric, character, or logical) based on the
+#' datatype column.
 #'
-#' @param constants_tbl A data frame with columns: variable, value, description
+#' @param constants_tbl A data frame with columns: variable, datatype, vnumeric, vstring,
+#'   vlogical (as produced by pendata's constants_assumptions.qmd pipeline)
 #' @param var_name Character string naming the variable to extract
-#' @param default Optional default value if variable not found (default: NULL, which throws error)
+#' @param default Optional default value if variable not found (default: NULL, throws error)
 #'
-#' @return The value of the constant (numeric, character, or logical depending on storage)
+#' @return Typed value: numeric for datatype="numeric", character for "string",
+#'   logical for "logical". Falls back to raw character value column if datatype is absent.
 #'
 #' @examples
 #' # Legacy approach:
 #' # dr_current <- params$dr_current_
 #'
 #' # Better structure approach:
-#' # dr_current <- get_constant(params$constants_assumptions_tbl, "dr_current")
+#' # dr_current <- get_constant(params$constants_assumptions_tbl, "dr_current_")
 #'
 get_constant <- function(constants_tbl, var_name, default = NULL) {
-  # Validate inputs
   if (!is.data.frame(constants_tbl)) {
     stop("constants_tbl must be a data frame")
   }
-
   if (!all(c("variable", "value") %in% names(constants_tbl))) {
     stop("constants_tbl must have 'variable' and 'value' columns")
   }
-
   if (!is.character(var_name) || length(var_name) != 1) {
     stop("var_name must be a single character string")
   }
 
-  # Look up the constant
   matching_rows <- constants_tbl[constants_tbl$variable == var_name, ]
 
   if (nrow(matching_rows) == 0) {
@@ -48,7 +47,17 @@ get_constant <- function(constants_tbl, var_name, default = NULL) {
     warning(sprintf("Multiple rows found for '%s', using first value", var_name))
   }
 
-  return(matching_rows$value[1])
+  row <- matching_rows[1, ]
+
+  # Return typed value if datatype column is present
+  if ("datatype" %in% names(row) && !is.na(row$datatype)) {
+    if (row$datatype == "numeric" && "vnumeric" %in% names(row)) return(row$vnumeric)
+    if (row$datatype == "string"  && "vstring"  %in% names(row)) return(row$vstring)
+    if (row$datatype == "logical" && "vlogical" %in% names(row)) return(row$vlogical)
+  }
+
+  # Fallback: raw character value
+  return(row$value)
 }
 
 
@@ -394,4 +403,230 @@ convert_amortization_to_legacy <- function(amortization_bases_tbl) {
   result$amo_period[is.na(result$amo_period)] <- "n/a"
 
   return(result)
+}
+
+
+# =============================================================================
+# TIER 2 ADAPTERS — benefit rules and computed lookup tables
+# =============================================================================
+# All 5 legacy lookup tables (dr_lookup, cola_lookup, ben_mult_lookup,
+# reduce_factor_lookup, fas_period_lookup) are replaced here.
+#
+# Sources:
+#   ben_mult_lookup       <- benefit_rules (adapter, column reshape)
+#   dr_lookup             <- computed from params$dr_current_ and params$dr_new_
+#   cola_lookup           <- computed from 4 COLA constants in params
+#   reduce_factor_lookup  <- computed from tier/class/age via a formula
+#   fas_period_lookup     <- computed from tier (tier_1 -> 5 yrs, others -> 8 yrs)
+#
+# The tier taxonomy used by all 5 tables:
+#   Tier strings: "tier_1", "tier_2", "tier_3"
+#   Status suffixes: "_norm", "_early", "_vested", "_non_vested"
+#   Combined: "tier_1_norm", "tier_1_early", "tier_2_norm", ... (12 total)
+
+.tier_at_dist_age_levels <- c(
+  "tier_1_non_vested", "tier_1_vested", "tier_1_early", "tier_1_norm",
+  "tier_2_non_vested", "tier_2_vested", "tier_2_early", "tier_2_norm",
+  "tier_3_non_vested", "tier_3_vested", "tier_3_early", "tier_3_norm"
+)
+
+
+#' Convert benefit_rules (better) to ben_mult_lookup (legacy)
+#'
+#' benefit_rules stores benefit multipliers with tier + early_retirement columns.
+#' ben_mult_lookup uses a combined tier_at_dist_age string and expands non-early
+#' tiers into three status variants (norm / vested / non_vested).
+#'
+#' @param benefit_rules_tbl Better structure with columns: class, tier,
+#'   early_retirement, dist_age_min_ge, dist_age_max_lt, yos_min_ge, yos_max_lt,
+#'   dist_year_min_ge, dist_year_max_lt, benmult
+#'
+#' @return Legacy format with columns: class, tier_at_dist_age,
+#'   dist_age_min_ge, dist_age_max_lt, yos_min_ge, yos_max_lt,
+#'   dist_year_min_ge, dist_year_max_lt, ben_mult, system
+#'
+convert_benefit_rules_to_legacy <- function(benefit_rules_tbl) {
+  required_cols <- c("class", "tier", "early_retirement",
+                     "dist_age_min_ge", "dist_age_max_lt",
+                     "yos_min_ge",      "yos_max_lt",
+                     "dist_year_min_ge","dist_year_max_lt",
+                     "benmult")
+  missing <- setdiff(required_cols, names(benefit_rules_tbl))
+  if (length(missing) > 0) {
+    stop(sprintf("benefit_rules_tbl missing columns: %s",
+                 paste(missing, collapse = ", ")))
+  }
+
+  # Non-early tiers expand to three status suffixes; early stays as-is.
+  # early_retirement may be logical or character depending on Excel cell type;
+  # coerce to logical defensively.
+  result <- benefit_rules_tbl |>
+    dplyr::mutate(
+      early_retirement = as.logical(early_retirement),
+      tier_statuses = dplyr::if_else(
+        early_retirement,
+        list("early"),
+        list(c("norm", "vested", "non_vested"))
+      )
+    ) |>
+    tidyr::unnest(tier_statuses) |>
+    dplyr::mutate(
+      tier_at_dist_age = paste(tier, tier_statuses, sep = "_"),
+      ben_mult = benmult,
+      system   = "FRS"   # always removed before the model join (select(-system))
+    ) |>
+    dplyr::select(class, tier_at_dist_age,
+                  dist_age_min_ge, dist_age_max_lt,
+                  yos_min_ge,      yos_max_lt,
+                  dist_year_min_ge,dist_year_max_lt,
+                  ben_mult, system)
+
+  # benefit_rules uses the model's maximum yos (e.g. 70) as a sentinel for
+  # "no upper bound", but the inequality join condition is `yos < yos_max_lt`.
+  # For members at exactly yos=max, 70 < 70 = FALSE, so they'd get no match.
+  # The legacy uses 9999 for unbounded.  Replace the sentinel value with 9999.
+  # Apply the same fix to dist_age_max_lt and dist_year_max_lt for consistency.
+  max_yos_lt  <- max(result$yos_max_lt,      na.rm = TRUE)
+  max_age_lt  <- max(result$dist_age_max_lt, na.rm = TRUE)
+  max_year_lt <- max(result$dist_year_max_lt,na.rm = TRUE)
+  result <- result |>
+    dplyr::mutate(
+      yos_max_lt       = ifelse(yos_max_lt       == max_yos_lt,  9999, yos_max_lt),
+      dist_age_max_lt  = ifelse(dist_age_max_lt  == max_age_lt,  9999, dist_age_max_lt),
+      dist_year_max_lt = ifelse(dist_year_max_lt == max_year_lt, 9999, dist_year_max_lt)
+    )
+
+  return(result)
+}
+
+
+#' Build dr_lookup from params constants
+#'
+#' Discount rate is tier_3 -> dr_new_, everything else -> dr_current_.
+#' No new data needed beyond existing params constants.
+#'
+#' @param params List/environment with dr_current_ and dr_new_
+#'
+#' @return data.frame with columns: tier_at_dist_age, dr
+#'
+build_dr_lookup <- function(params) {
+  ctbl      <- params$constants_assumptions_tbl
+  dr_current <- get_constant(ctbl, "dr_current_")
+  dr_new     <- get_constant(ctbl, "dr_new_")
+
+  data.frame(tier_at_dist_age = .tier_at_dist_age_levels, stringsAsFactors = FALSE) |>
+    dplyr::mutate(
+      dr = dplyr::if_else(
+        grepl("tier_3", tier_at_dist_age, fixed = TRUE),
+        dr_new,
+        dr_current
+      )
+    )
+}
+
+
+#' Build fas_period_lookup from tier name
+#'
+#' FAS period is 5 years for tier_1 members, 8 years for all others.
+#' No data needed — pure rule encoded in plan provisions.
+#'
+#' @return data.frame with columns: tier_at_term_age, fas_period
+#'
+build_fas_period_lookup <- function() {
+  data.frame(tier_at_term_age = .tier_at_dist_age_levels, stringsAsFactors = FALSE) |>
+    dplyr::mutate(
+      fas_period = dplyr::if_else(
+        grepl("tier_1", tier_at_term_age, fixed = TRUE), 5L, 8L
+      )
+    )
+}
+
+
+#' Build reduce_factor_lookup from plan provisions
+#'
+#' Reduction factor for early retirement:
+#'   - norm / vested / non_vested tiers: factor = 1 (no reduction)
+#'   - early tiers, special class:
+#'       tier_1 -> 1 - 0.05 * (55 - dist_age)
+#'       tier_2 or tier_3 -> 1 - 0.05 * (60 - dist_age)
+#'   - early tiers, all other classes:
+#'       tier_1 -> 1 - 0.05 * (62 - dist_age)
+#'       tier_2 or tier_3 -> 1 - 0.05 * (65 - dist_age)
+#'
+#' @param params List/environment with class_names_no_drop_frs_ and age_range_
+#'
+#' @return data.frame with columns: tier_at_dist_age, class, dist_age, reduce_factor
+#'
+build_reduce_factor_lookup <- function(params) {
+  # NOTE: legacy (archive FRS_rules_tables.R) used:
+  #   tier_norm  ~ 1
+  #   tier_early ~ formula
+  #   everything else (_vested, _non_vested) ~ NA  [fell through TRUE ~ NA]
+  # We match that behavior exactly for backward compatibility.
+  expand.grid(
+    tier_at_dist_age = .tier_at_dist_age_levels,
+    class            = params$class_names_no_drop_frs_,
+    dist_age         = params$age_range_,
+    stringsAsFactors = FALSE
+  ) |>
+    dplyr::mutate(
+      is_norm   = grepl("_norm",  tier_at_dist_age, fixed = TRUE),
+      is_early  = grepl("_early", tier_at_dist_age, fixed = TRUE),
+      is_tier_1 = grepl("tier_1", tier_at_dist_age, fixed = TRUE),
+      is_tier_2 = grepl("tier_2", tier_at_dist_age, fixed = TRUE),
+      reduce_factor = dplyr::case_when(
+        is_norm                                    ~ 1,
+        is_early & class == "special" & is_tier_1  ~ 1 - 0.05 * (55 - dist_age),
+        is_early & class == "special"              ~ 1 - 0.05 * (60 - dist_age),
+        is_early & is_tier_1                       ~ 1 - 0.05 * (62 - dist_age),
+        is_early & is_tier_2                       ~ 1 - 0.05 * (65 - dist_age),
+        is_early                                   ~ 1 - 0.05 * (65 - dist_age),
+        TRUE                                       ~ NA_real_  # _vested, _non_vested: NA (legacy)
+      )
+    ) |>
+    dplyr::select(tier_at_dist_age, class, dist_age, reduce_factor)
+}
+
+
+#' Build cola_lookup from params COLA constants
+#'
+#' COLA rate depends on tier, yos, and entry_year:
+#'   - tier_1 (constant COLA): cola_tier_1_active_
+#'   - tier_1 (non-constant): cola_tier_1_active_ * (yos before 2011 / total yos)
+#'   - tier_2: cola_tier_2_active_
+#'   - tier_3: cola_tier_3_active_
+#'
+#' This is a large table (12 tiers x many yos x many entry_years).
+#'
+#' @param params List/environment with COLA constants and yos_range_, year_range_
+#'
+#' @return data.frame with columns: tier_at_dist_age, yos, entry_year, cola
+#'
+build_cola_lookup <- function(params) {
+  ctbl        <- params$constants_assumptions_tbl
+  cola_t1     <- get_constant(ctbl, "cola_tier_1_active_")
+  cola_t2     <- get_constant(ctbl, "cola_tier_2_active_")
+  cola_t3     <- get_constant(ctbl, "cola_tier_3_active_")
+  t1_constant <- get_constant(ctbl, "cola_tier_1_active_constant_")  # "yes" or "no"
+
+  expand.grid(
+    tier_at_dist_age = .tier_at_dist_age_levels,
+    yos              = params$yos_range_,
+    entry_year       = params$year_range_,
+    stringsAsFactors = FALSE
+  ) |>
+    dplyr::mutate(
+      yos_b4_2011 = pmin(pmax(2011 - entry_year, 0), yos),
+      is_tier_1   = grepl("tier_1", tier_at_dist_age, fixed = TRUE),
+      is_tier_2   = grepl("tier_2", tier_at_dist_age, fixed = TRUE),
+      cola = dplyr::case_when(
+        is_tier_1 & t1_constant == "no" ~
+          dplyr::if_else(yos > 0, cola_t1 * yos_b4_2011 / yos, 0),
+        is_tier_1 & t1_constant == "yes" ~
+          cola_t1,
+        is_tier_2 ~ cola_t2,
+        TRUE      ~ cola_t3
+      )
+    ) |>
+    dplyr::select(tier_at_dist_age, yos, entry_year, cola)
 }

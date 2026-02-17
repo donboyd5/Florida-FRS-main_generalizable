@@ -115,6 +115,52 @@ the error temporarily. See issue #6 for full details and resolution steps.
 
 ---
 
+## ISSUE 5: benefit_rules missing tier_3 entries in pendata
+
+**Discovered:** Week 3 Tier 2 migration — baseline_funding test failure (regular class, aal_new ~121× off)
+
+**Observation:** The `benefit_rules` better structure in pendata has entries only for `tier_1`
+and `tier_2`. There are **no tier_3 rows** for any of the 7 classes. However, the legacy
+`ben_mult_lookup` (Gang's `frs_data_env_bf_cal.RData`) has tier_3 entries for all 7 classes
+with distinct benefit multipliers:
+
+| Class | Tier | Notes |
+|-------|------|-------|
+| regular | tier_3 | Age/yos-graded: 0.0160-0.0168 (hybrid DB component) |
+| admin | tier_3 | Age-graded: 0.0160-0.0168 |
+| eco | tier_3 | 0.0300 (flat) |
+| eso | tier_3 | 0.0300 (flat) |
+| judges | tier_3 | 0.0333 (flat) |
+| senior_management | tier_3 | 0.0200 (flat) |
+| special | tier_3 | 0.0200 (pre-1975) or 0.0300 (1975+) by dist_year |
+
+**Temporary workaround** (in FRS_new_workflow.R): save legacy tier_3 rows from
+`params$ben_mult_lookup` *before* overwriting it with the adapter output, then
+`rbind()` the tier_3 supplement back in afterward. This maintains backward compatibility.
+
+**Action needed:** Add tier_3 benefit rules to pendata's `benefit_rules` table for all 7
+classes, using the AV source to verify the multipliers. After updating and reinstalling
+pendata, remove the tier_3 supplement block from `FRS_new_workflow.R`.
+
+**Why tier_3 was omitted:** Unknown — possibly because tier_3 (Investment Plan hybrid) was
+treated as DC-only in an earlier version of the model, or because the AV data for tier_3 DB
+components was not extracted.
+
+**Also discovered — tier_2 incomplete**: The pendata `benefit_rules` table also has
+incorrect/incomplete tier_2 data for at least three classes:
+
+| Class | benefit_rules tier_2 benmult | Legacy correct values |
+|-------|------------------------------|----------------------|
+| regular | only 0.0160 (flat) | 0.0160, 0.0163, 0.0165, 0.0168 (graded by age/yos) |
+| admin | 0.0160 and 0.03 (wrong) | 0.0160, 0.0163, 0.0165, 0.0168 (graded) |
+| special | only 0.03 | 0.02 and 0.03 (depends on dist_year) |
+
+**Workaround**: In `FRS_new_workflow.R`, the adapter output is used only for **tier_1** rows.
+Tier_2 and tier_3 are supplemented entirely from the legacy `params$ben_mult_lookup`.
+This maintains backward compatibility (160/160 tests pass) until pendata is fixed.
+
+---
+
 ## Future Design Questions (no action yet)
 
 - **Multi-plan generalization:** When a second plan is added to pendata, its grouped data
