@@ -1,7 +1,7 @@
 # Session Notes - FRS Pension Model Rationalization
 
-**Last Updated**: 2026-02-16
-**Current Status**: Week 1 COMPLETE ✓ - Ready for Week 2
+**Last Updated**: 2026-02-16 (Week 2 IN PROGRESS)
+**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration STARTED (2 tables migrated)
 
 ---
 
@@ -45,36 +45,53 @@ Then say: *"I understand we're at [STATUS]. Ready to proceed with [NEXT TASK]."*
 
 ---
 
-## Next Steps: Week 2 - Tier 1 Migration
+## Week 2 Progress: Tier 1 Migration (IN PROGRESS)
 
-### Goal:
-Migrate simple tables with low code impact (6 tables)
+### What We Accomplished (2026-02-16):
 
-### Tasks:
+1. ✅ **Created helper functions** ([FRS_helper_functions.R](refactor/R/FRS_helper_functions.R)):
+   - `get_constant()` - Access constants from constants_assumptions_tbl
+   - `validate_better_structure()` - Schema validation
+   - `get_better_table_name()` - Map legacy to better structure names
 
-1. **Create helper functions**:
-   - [ ] `get_constant()` - Access constants from constants_assumptions_tbl
-   - [ ] `validate_better_structure()` - Schema validation
+2. ✅ **Created adapter functions (Option A approach)**:
+   - `convert_salarygrowth_to_legacy()` - Converts range-based salary growth to cumulative products
+   - `convert_amortization_to_legacy()` - Simple pass-through for amortization
 
-2. **Update data prep files** (3 files):
-   - [ ] `FRS_benefit_model_get_and_save_bendata.R`
-   - [ ] `FRS_workforce_model_get_and_save_wfdata_GC_s.R`
-   - [ ] `FRS_liability_model_get_and_save_liabdata.R`
+3. ✅ **Migrated 2 Tier 1 tables successfully**:
+   - ✅ `salary_growth_table` ← `salarygrowth` (better structure)
+   - ✅ `current_amort_layers_table` ← `amortization_bases` (better structure)
 
-3. **Migrate Tier 1 tables**:
-   - [ ] `salary_headcount_table` → `headcount_salary`
-   - [ ] `salary_growth_table` → `salarygrowth`
-   - [ ] `separation_rate_table` → `withdrawal`
-   - [ ] `retiree_distribution` → `retirees`
-   - [ ] `current_amort_layers_table` → `amortization_bases`
-   - [ ] Begin constants migration (high-use constants first)
+4. ✅ **Integrated adapters into workflow**:
+   - Modified [FRS_new_workflow.R](refactor/R/FRS_new_workflow.R) to load helpers and apply adapters
+   - Tested workflow loads correctly with adapters
 
-4. **Test**:
-   - [ ] Run model with Tier 1 better structures
-   - [ ] Compare outputs to baseline
-   - [ ] Document any discrepancies
+5. ✅ **Testing & validation**:
+   - Created [test_adapters.R](refactor/R/test_adapters.R) - Validates adapter output matches legacy format
+   - Created [test_workflow_tier1.R](refactor/R/test_workflow_tier1.R) - Tests workflow integration
+   - Created [compare_legacy_better_schemas.R](refactor/R/compare_legacy_better_schemas.R) - Schema comparison tool
 
-**Estimated time**: 3-5 days
+### Key Discovery:
+
+**Better structures are NOT drop-in replacements!**
+- Better structures use **range-based** age/yos (age_lb/ub, yos_lb/ub)
+- Legacy uses **point values** (age, yos)
+- Better structures often lack year-based columns (entry_year, term_year)
+- **Solution**: Adapter functions convert better → legacy format (Option A approach)
+
+### Remaining Tier 1 Tasks:
+
+**Complex adapters (deferred for later)**:
+- [ ] `salary_headcount_table` → `headcount_salary` (needs entry_year generation + range expansion)
+- [ ] `separation_rate_table` → `withdrawal` (362K rows → 3K rows, complex transformation)
+- [ ] `retiree_distribution` → `retirees` (simpler, could attempt next)
+
+**Testing**:
+- [ ] Test full model run end-to-end with 2 migrated tables
+- [ ] Compare outputs to baseline
+- [ ] Document any discrepancies
+
+**Estimated remaining time**: 2-3 days for complex adapters, 1 day for testing
 
 ---
 

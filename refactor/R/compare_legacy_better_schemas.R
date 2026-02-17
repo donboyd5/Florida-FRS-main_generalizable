@@ -1,0 +1,82 @@
+# Compare schemas of legacy vs better structures for Tier 1 migration
+load('D:/R_projects/pendata/data/frs.rda')
+
+cat('=== TIER 1 TABLE SCHEMA COMPARISON ===\n\n')
+
+# 1. salary_headcount_table (legacy) vs headcount_salary (better)
+cat('1. HEADCOUNT/SALARY DATA:\n')
+cat('   Legacy (salary_headcount_table):\n')
+cat('      Rows:', nrow(frs$params_env$salary_headcount_table), '\n')
+cat('      Columns:', paste(names(frs$params_env$salary_headcount_table), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$salary_headcount_table, 3))
+
+cat('\n   Better (headcount_salary):\n')
+cat('      Rows:', nrow(frs$params_env$headcount_salary), '\n')
+cat('      Columns:', paste(names(frs$params_env$headcount_salary), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$headcount_salary, 3))
+
+# 2. salary_growth_table (legacy) vs salarygrowth (better)
+cat('\n\n2. SALARY GROWTH DATA:\n')
+cat('   Legacy (salary_growth_table):\n')
+cat('      Rows:', nrow(frs$params_env$salary_growth_table), '\n')
+cat('      Columns:', paste(names(frs$params_env$salary_growth_table), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$salary_growth_table, 3))
+
+cat('\n   Better (salarygrowth):\n')
+cat('      Rows:', nrow(frs$params_env$salarygrowth), '\n')
+cat('      Columns:', paste(names(frs$params_env$salarygrowth), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$salarygrowth, 3))
+
+# 3. separation_rate_table (legacy) vs withdrawal (better)
+cat('\n\n3. SEPARATION/WITHDRAWAL DATA:\n')
+cat('   Legacy (separation_rate_table):\n')
+cat('      Rows:', nrow(frs$params_env$separation_rate_table), '\n')
+cat('      Columns:', paste(names(frs$params_env$separation_rate_table), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$separation_rate_table, 3))
+
+cat('\n   Better (withdrawal):\n')
+cat('      Rows:', nrow(frs$params_env$withdrawal), '\n')
+cat('      Columns:', paste(names(frs$params_env$withdrawal), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$withdrawal, 3))
+
+# 4. retiree_distribution (legacy) vs retirees (better)
+cat('\n\n4. RETIREE DATA:\n')
+cat('   Legacy (retiree_distribution):\n')
+cat('      Rows:', nrow(frs$params_env$retiree_distribution), '\n')
+cat('      Columns:', paste(names(frs$params_env$retiree_distribution), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$retiree_distribution, 3))
+
+cat('\n   Better (retirees):\n')
+cat('      Rows:', nrow(frs$params_env$retirees), '\n')
+cat('      Columns:', paste(names(frs$params_env$retirees), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$retirees, 3))
+
+# 5. current_amort_layers_table (legacy) vs amortization_bases (better)
+cat('\n\n5. AMORTIZATION DATA:\n')
+if ('current_amort_layers_table_' %in% names(frs$params_env)) {
+  cat('   Legacy (current_amort_layers_table_):\n')
+  cat('      Rows:', nrow(frs$params_env$current_amort_layers_table_), '\n')
+  cat('      Columns:', paste(names(frs$params_env$current_amort_layers_table_), collapse=', '), '\n')
+  cat('      Sample:\n')
+  print(head(frs$params_env$current_amort_layers_table_, 3))
+}
+
+cat('\n   Better (amortization_bases):\n')
+cat('      Rows:', nrow(frs$params_env$amortization_bases), '\n')
+cat('      Columns:', paste(names(frs$params_env$amortization_bases), collapse=', '), '\n')
+cat('      Sample:\n')
+print(head(frs$params_env$amortization_bases, 3))
+
+cat('\n\n=== KEY INSIGHTS ===\n')
+cat('- Better structures use RANGE-BASED age/yos (age_lb/ub, yos_lb/ub)\n')
+cat('- Legacy structures use POINT VALUES (age, yos)\n')
+cat('- Better structures include descriptive labels\n')
+cat('- All better structures are STACKED by class\n')
