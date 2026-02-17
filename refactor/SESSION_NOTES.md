@@ -79,9 +79,10 @@ Then say: *"I understand we're at [STATUS]. Ready to proceed with [NEXT TASK]."*
    - `convert_salarygrowth_to_legacy()` - Converts range-based salary growth to cumulative products
    - `convert_amortization_to_legacy()` - Handles type/class-name normalization for amortization
 
-3. ✅ **Migrated 2 Tier 1 tables**:
+3. ✅ **Migrated 3 Tier 1 tables**:
    - ✅ `salary_growth_table` ← `salarygrowth` (better structure)
    - ✅ `current_amort_layers_table` ← `amortization_bases` (better structure)
+   - ✅ `retiree_distribution` ← `retirees` (better structure, done as Option C bonus before Week 3)
 
 4. ✅ **Integrated adapters into workflow** ([FRS_new_workflow.R](R/FRS_new_workflow.R))
 
@@ -178,11 +179,11 @@ refactor/
 ├── R/
 │   ├── FRS_new_workflow.R                        # Main orchestrator
 │   ├── FRS_benefit_model_functions.R             # Benefit calculations
-│   ├── FRS_benefit_model_get_and_save_bendata.R  # Benefit data prep ⚠️ Week 2
+│   ├── FRS_benefit_model_get_and_save_bendata.R  # Benefit data prep ⚠️ Week 3
 │   ├── FRS_workforce_model_functions_V3.R        # Workforce projection
-│   ├── FRS_workforce_model_get_and_save_wfdata_GC_s.R  # Workforce data prep ⚠️ Week 2
+│   ├── FRS_workforce_model_get_and_save_wfdata_GC_s.R  # Workforce data prep ⚠️ Week 3
 │   ├── FRS_liability_model_functions.R           # AAL calculations
-│   ├── FRS_liability_model_get_and_save_liabdata.R  # Liability data prep ⚠️ Week 2
+│   ├── FRS_liability_model_get_and_save_liabdata.R  # Liability data prep ⚠️ Week 3
 │   ├── FRS_funding_amort.R                       # Amortization
 │   ├── FRS_funding_model_functions_loop_without_drop_V5.R  # Funding calcs
 │   └── FRS_funding_model_functions_drop_only.R   # DROP module
@@ -190,7 +191,7 @@ refactor/
 ├── data_structure_mapping_VERIFIED.md            # Week 1 results
 └── SESSION_NOTES.md                              # This file
 
-⚠️ = Files to modify in Week 2
+⚠️ = Files to modify in Week 3
 ```
 
 ### External Dependencies:
@@ -212,13 +213,13 @@ refactor/
 1. Read SESSION_NOTES.md (this file)
 2. Read pension_model_analysis.qmd for full context
 3. Check git log for recent commits
-4. Ask user: "I see we completed Week 1. Ready to start Week 2 Tier 1 migration?"
+4. Say: "I see Week 2 is complete (3 Tier 1 tables migrated, 160/160 tests pass). Ready to start Week 3 — Tier 2 migration of `benefit_rules` and `retirement_rates`."
 
 ### If you (User) need to resume after a break:
 
 1. Check this file for current status
 2. Review data_structure_mapping_VERIFIED.md for Week 1 results
-3. Tell me: "Let's continue with Week 2" or "Remind me where we are"
+3. Tell me: "Let's continue with Week 3" or "Remind me where we are"
 
 ---
 
