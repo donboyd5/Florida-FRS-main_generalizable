@@ -1,6 +1,115 @@
 #################################################################
 ##                       Liability Model                       ##
 #################################################################
+library(dplyr)
+# library to read xlsx files
+library(readxl)
+
+
+# get_wf_active -----------------------------------------------------------
+
+wf_active_df_s <- wf_data_env$wf_active_df_s
+benefit_val_table_s <-  bf_data_env$benefit_data_s$benefit_val_table_s
+params <- as.list(pendata::frs$params_env)
+
+params$component_meta <- readxl::read_excel(
+  here::here("refactor","R","component.xlsx"),
+  sheet = "component_meta"
+)
+
+params$plan_alloc <- readxl::read_excel(
+  here::here("refactor","R","component.xlsx"),
+  sheet = "plan_alloc"
+)
+
+get_wf_active_df_final_s_2 <- function(wf_active_df_s,
+                                       benefit_val_table_s,
+                                       params) {
+  
+  safe_divide <- function(num, den) if_else(den == 0, 0, num / den)
+  
+  # components relevant to ACTIVE workflow + plan types
+  meta_active <- params$component_meta %>%
+    filter(str_detect(applies_to, "active")) %>%
+    select(component, plan_type)
+  
+  active_components <- meta_active %>% pull(component)
+  
+  # base: attach benefit values
+  base <- wf_active_df_s %>%
+    filter(year <= params$start_year_ + params$model_period_) %>%
+    mutate(entry_year = year - (age - entry_age)) %>%
+    left_join(
+      benefit_val_table_s,
+      by = c("class", "entry_age", "age" = "term_age", "year" = "term_year", "entry_year")
+    ) %>%
+    select(
+      class, year, entry_age, age, entry_year,
+      n_active, salary, indv_norm_cost,
+      pvfb_db_wealth_at_current_age, pvfnc_db
+    )
+  
+  # allocate +  attach plan_type
+  long <- base %>%
+    left_join(
+      params$plan_alloc %>% filter(component %in% active_components),
+      by = join_by(class, entry_year >= entry_year_ll, entry_year < entry_year_ul)
+    ) %>%
+    # mutate(
+    #   # robust share: handle NA + character shares
+    #   share = as.numeric(share),
+      # share = coalesce(share, 0)
+    # ) %>%
+    left_join(meta_active, by = "component") %>%
+    mutate(
+      n_comp  = n_active * share,
+      payroll = salary * n_comp,
+      nc_dol  = if_else(plan_type == "db", indv_norm_cost * salary * n_comp, 0),
+      pvfb    = if_else(plan_type == "db", pvfb_db_wealth_at_current_age * n_comp, 0),
+      pvfnc   = if_else(plan_type == "db", pvfnc_db * n_comp, 0), 
+      aal_active  = pvfb - pvfnc
+    )
+  
+  # summarise by component and pivot wide
+  out <- long %>%
+    group_by(class, year, component) %>%
+    summarise(
+      payroll      = sum(payroll, na.rm = TRUE),
+      nc_rate      = safe_divide(sum(nc_dol, na.rm = TRUE), sum(payroll, na.rm = TRUE)),
+      pvfb_active  = sum(pvfb, na.rm = TRUE),
+      pvfnc        = sum(pvfnc, na.rm = TRUE),
+      aal_active   = sum(aal_active, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_wider(
+      names_from  = component,
+      values_from = c(payroll, nc_rate, pvfb_active, pvfnc, aal_active),
+      names_glue  = "{.value}_{component}_est",
+      values_fill = 0
+    )
+  
+  totals <- long %>%
+    group_by(class, year) %>%
+    summarise(
+      total_payroll_est = sum(payroll, na.rm = TRUE),
+      total_n_active    = sum(n_comp,  na.rm = TRUE),
+      
+      payroll_db_est = sum(if_else(plan_type == "db", payroll, 0), na.rm = TRUE),
+      payroll_dc_est = sum(if_else(plan_type == "dc", payroll, 0), na.rm = TRUE),
+      
+      total_nc_rate_est = safe_divide(
+        sum(if_else(plan_type == "db", nc_dol, 0), na.rm = TRUE),
+        sum(if_else(plan_type == "db", payroll, 0), na.rm = TRUE)
+      ),
+      .groups = "drop"
+    )
+  
+  out <- out %>%
+    left_join(totals, by = c("class", "year"))
+  
+  out
+}
+
 
 get_wf_active_df_final_s <- function(wf_active_df_s,
                                      benefit_val_table_s,
@@ -63,6 +172,91 @@ get_wf_active_df_final_s <- function(wf_active_df_s,
 }
 
 
+wf_active_df_final_s_2 <- get_wf_active_df_final_s_2(wf_active_df_s, benefit_val_table_s, params)
+wf_active_df_final_s <- get_wf_active_df_final_s(wf_active_df_s, benefit_val_table_s, params)
+
+
+n2  <- names(wf_active_df_final_s_2)
+n1  <- names(wf_active_df_final_s)
+
+common_cols   <- intersect(n2, n1)
+only_in_2     <- setdiff(n2, n1)
+only_in_old   <- setdiff(n1, n2)
+
+common_cols
+only_in_2 
+only_in_old
+
+a2 <- wf_active_df_final_s_2 %>% select(all_of(common_cols)) %>% arrange(class, year)
+b2 <- wf_active_df_final_s   %>% select(all_of(common_cols)) %>% arrange(class, year)
+
+all.equal(a2, b2, tolerance = 1e-10)
+
+
+# get_wf_term -------------------------------------------------------------
+
+
+get_wf_term_df_final_s_2 <- function(wf_term_df_s, benefit_val_table_s, benefit_table_s, params) {
+  
+  safe_divide <- function(num, den) if_else(den == 0, 0, num / den)
+  
+  # TERM components (based on metadata)
+  meta_term <- params$component_meta %>%
+    filter(str_detect(applies_to, "term")) %>%
+    select(component, plan_type)
+  
+  term_components <- meta_term$component
+  
+  # Base term records + compute PV at termination 
+  base <- wf_term_df_s %>%
+    filter(year <= params$start_year_ + params$model_period_, n_term > 0) %>%
+    mutate(entry_year = year - (age - entry_age)) %>%
+    # brings pvfb_db_at_term_age (numerator piece)
+    left_join(benefit_val_table_s, by = c("class", "entry_age", "term_year", "entry_year")) %>%
+    # brings cum_mort_dr at current age via dist_age/dist_year (denominator piece)
+    left_join(
+      benefit_table_s %>% select(-pvfb_db_at_term_age),
+      by = c("class", "entry_age", "age" = "dist_age", "year" = "dist_year", "term_year", "entry_year")
+    ) %>%
+    mutate(
+      pvfb_db_at_term_age = coalesce(pvfb_db_at_term_age, 0),
+      cum_mort_dr_current = coalesce(cum_mort_dr, 0),
+      pvfb_db_term        = safe_divide(pvfb_db_at_term_age, cum_mort_dr_current)
+    )
+  
+  # Allocate n_term to components using plan_alloc shares
+  long <- base %>%
+    left_join(
+      params$plan_alloc %>% filter(component %in% term_components),
+      by = join_by(class, entry_year >= entry_year_ll, entry_year < entry_year_ul)
+    ) %>%
+    mutate(share = coalesce(as.numeric(share), 0)) %>%
+    left_join(meta_term, by = "component") %>%
+    mutate(
+      n_comp   = n_term * share,
+      # Term AAL only meaningful for DB components
+      aal_term = if_else(plan_type == "db", pvfb_db_term * n_comp, 0)
+    )
+  
+  # Component-level outputs (wide)
+  out <- long %>%
+    group_by(class, year, component) %>%
+    summarise(
+      aal_term = sum(aal_term, na.rm = TRUE),
+      # n_term   = sum(n_comp,   na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_wider(
+      names_from  = component,
+      values_from = c(aal_term), #, n_term),
+      names_glue  = "{.value}_{component}_est",
+      values_fill = 0
+    )
+  
+  return(out)
+}
+
+
 get_wf_term_df_final_s <- function(
     wf_term_df_s,
     benefit_val_table_s,
@@ -108,6 +302,66 @@ get_wf_term_df_final_s <- function(
   return(wf_term_df_final_s)
 }
 
+# Compare term results
+wf_term_df_s <- wf_data_env$wf_term_df_s
+benefit_table_s <- bf_data_env$benefit_data_s$benefit_table_s
+wf_term_df_final_s_2 <- get_wf_term_df_final_s_2(wf_term_df_s, benefit_val_table_s, benefit_table_s, params)
+wf_term_df_final_s <- get_wf_term_df_final_s(wf_term_df_s, benefit_val_table_s, benefit_table_s, params)
+
+identical(wf_term_df_final_s_2, wf_term_df_final_s)
+
+
+# get_wf_refund -----------------------------------------------------------
+
+
+get_wf_refund_df_final_s_2 <- function(wf_refund_df_s, benefit_table_s, params) {
+  
+  # REFUND components (based on metadata)
+  meta_refund <- params$component_meta %>%
+    filter(str_detect(applies_to, "refund")) %>%
+    select(component, plan_type)
+  
+  refund_components <- meta_refund$component
+  
+  # Base refund records + attach DB employee balance
+  base <- wf_refund_df_s %>%
+    filter(year <= params$start_year_ + params$model_period_, n_refund > 0) %>%
+    mutate(entry_year = year - (age - entry_age)) %>%
+    left_join(
+      benefit_table_s,
+      by = c("class", "entry_age", "age" = "dist_age", "year" = "dist_year", "term_year", "entry_year")
+    ) %>%
+    mutate(db_ee_balance = coalesce(db_ee_balance, 0))
+  
+  # Allocate to components using plan_alloc shares
+  long <- base %>%
+    left_join(
+      params$plan_alloc %>% filter(component %in% refund_components),
+      by = join_by(class, entry_year >= entry_year_ll, entry_year < entry_year_ul)
+    ) %>%
+    mutate(share = coalesce(as.numeric(share), 0)) %>%
+    left_join(meta_refund, by = "component") %>%
+    mutate(
+      n_comp = n_refund * share,
+      refund = if_else(plan_type == "db", db_ee_balance * n_comp, 0)
+    ) 
+  
+  # Component-level outputs (wide)
+  out <- long %>%
+    group_by(class, year, component) %>%
+    summarise(
+      refund   = sum(refund, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_wider(
+      names_from  = component,
+      values_from = c(refund),
+      names_glue  = "{.value}_{component}_est",
+      values_fill = 0
+    )
+  
+    return(out)
+}
 
 get_wf_refund_df_final_s <- function(wf_refund_df_s,
                                      benefit_table_s,
@@ -148,6 +402,83 @@ get_wf_refund_df_final_s <- function(wf_refund_df_s,
   return(wf_refund_df_final_s)
 }
 
+wf_refund_df_s <- wf_data_env$wf_refund_df_s
+
+wf_refund_df_final_s <- get_wf_refund_df_final_s(wf_refund_df_s, benefit_table_s, params)
+wf_refund_df_final_s_2 <- get_wf_refund_df_final_s_2(wf_refund_df_s, benefit_table_s, params)
+
+names(wf_refund_df_final_s)
+names(wf_refund_df_final_s_2)
+
+identical(wf_refund_df_final_s, wf_refund_df_final_s_2)
+
+
+# get_wf_retire -----------------------------------------------------------
+
+get_wf_retire_df_final_s_2 <- function(wf_retire_df_s, benefit_table_s, ann_factor_table_s, params) {
+  
+  # RETIRE components (based on metadata)
+  meta_retire <- params$component_meta %>%
+    filter(str_detect(applies_to, "retire")) %>%
+    select(component, plan_type)
+  
+  retire_components <- meta_retire$component
+  
+  # Base retire records + attach base DB benefit, COLA, and annuity factor
+  base <- wf_retire_df_s %>%
+    filter(year <= params$start_year_ + params$model_period_) %>%
+    mutate(entry_year = year - (age - entry_age)) %>%
+    # base benefit + cola (from benefit_table)
+    left_join(
+      benefit_table_s %>% select(-ann_factor),,
+      by = c("class", "entry_age", "entry_year", "term_year", "retire_year" = "dist_year")
+    ) %>%
+    left_join(
+      ann_factor_table_s %>% select(-cola),
+      by = c("class", "entry_age", "entry_year", "term_year", "year" = "dist_year")
+    ) %>%
+    mutate(
+      db_benefit = coalesce(db_benefit, 0),
+      cola       = coalesce(cola, 0),
+      ann_factor = coalesce(ann_factor, 0),
+      # adjust benefit forward from retirement year
+      db_benefit_final = db_benefit * (1 + cola)^(year - retire_year),
+      # PVFB for retirees excludes first payment
+      pvfb_db_retire   = db_benefit_final * (ann_factor - 1)
+    )
+  
+  # Allocate retirees to components using plan_alloc shares
+  long <- base %>%
+    left_join(
+      params$plan_alloc %>% filter(component %in% retire_components),
+      by = join_by(class, entry_year >= entry_year_ll, entry_year < entry_year_ul)
+    ) %>%
+    mutate(share = coalesce(as.numeric(share), 0)) %>%
+    left_join(meta_retire, by = "component") %>%
+    mutate(
+      n_comp = n_retire * share,
+      # retire benefits + retire AAL are DB-only
+      retire_ben = if_else(plan_type == "db", db_benefit_final * n_comp, 0),
+      aal_retire = if_else(plan_type == "db", pvfb_db_retire   * n_comp, 0)
+    )
+  
+  # Component-level outputs (wide)
+  out <- long %>%
+    group_by(class, year, component) %>%
+    summarise(
+      retire_ben = sum(retire_ben, na.rm = TRUE),
+      aal_retire = sum(aal_retire, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_wider(
+      names_from  = component,
+      values_from = c(retire_ben, aal_retire),
+      names_glue  = "{.value}_{component}_est",
+      values_fill = 0
+    )
+  
+  return(out)
+}
 
 get_wf_retire_df_final_s <- function(wf_retire_df_s,
                                      benefit_table_s,
@@ -191,6 +522,18 @@ get_wf_retire_df_final_s <- function(wf_retire_df_s,
   
   return(wf_retire_df_final_s)    
 }
+
+wf_retire_df_s <- wf_data_env$wf_retire_df_s
+ann_factor_table_s <- bf_data_env$benefit_data_s$ann_factor_table
+benefit_table_s <- bf_data_env$benefit_data_s$benefit_table_s
+wf_retire_df_final_s <- get_wf_retire_df_final_s(wf_retire_df_s, benefit_table_s, ann_factor_table_s, params)
+wf_retire_df_final_s_2 <- get_wf_retire_df_final_s_2(wf_retire_df_s, benefit_table_s, ann_factor_table_s, params)
+
+names(wf_retire_df_final_s)
+names(wf_retire_df_final_s_2)
+
+identical(wf_retire_df_final_s, wf_retire_df_final_s_2)
+all.equal(wf_retire_df_final_s, wf_retire_df_final_s_2, tolerance = 1e-10)
 
 
 get_wf_retire_current_final_s <- function(ann_factor_retire_table_s,

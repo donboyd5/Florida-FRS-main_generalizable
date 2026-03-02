@@ -26,6 +26,33 @@ if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 params_env <- new.env()
 params <- list2env(as.list(pendata::frs$params_env))
 
+params$component_meta <- readxl::read_excel(
+  here::here("refactor","R","component.xlsx"),
+  sheet = "component_meta"
+)
+
+params$plan_alloc <- readxl::read_excel(
+  here::here("refactor","R","component.xlsx"),
+  sheet = "plan_alloc"
+)
+
+params$ref_year <- readxl::read_excel(
+  path  = here::here("refactor", "R", "component.xlsx"),
+  sheet = "salary_proj_reference_year"
+)
+
+params$get_fas <- function(salary_vec, fas_period) {
+  x <- c(NA_real_, salary_vec[-length(salary_vec)])  # lag 1, preserve length
+  RcppRoll::roll_mean(x, n = fas_period, align = "right", fill = NA_real_)
+}
+
+params$tier_table <- params$tier_table %>%
+  dplyr::mutate(
+    is_norm_retire_elig = tier %in% c("tier_1_norm", "tier_2_norm", "tier_3_norm"),
+    vested_at_term = grepl("vested", tier, fixed = TRUE) &
+      !grepl("non_vested", tier, fixed = TRUE)
+  )
+
 # --- TIER 1 MIGRATION: Load helpers and convert better structures to legacy format ---
 message("Loading helper functions and applying Tier 1 adapters...")
 source(fs::path(rdir, "FRS_helper_functions.R"))
@@ -94,7 +121,7 @@ message("  ✓ Built cola_lookup from COLA constants (cola_tier_1/2/3_active_)")
 # --- Benefit model helpers ----------------------------------------------------
 message("sourcing FRS_benefit_model_helper_functions and data function...")
 bm_env <- new.env()
-source(fs::path(rdir, "FRS_benefit_model_functions.R"), local = bm_env)
+source(fs::path(rdir, "FRS_benefit_model_functions_2.R"), local = bm_env)
 
 # --- Load workforce, liability, funding functions -----------------------------
 message("Loading model functions...")
@@ -107,7 +134,7 @@ source(fs::path(rdir, "FRS_workforce_model_functions_V3.R"), local = wfm_env)
 # Liability
 message("sourcing FRS_liability_model_functions...")
 lm_env <- new.env()
-source(fs::path(rdir, "FRS_liability_model_functions.R"), local = lm_env)
+source(fs::path(rdir, "FRS_liability_model_functions_2.R"), local = lm_env)
 
 # Funding
 message("sourcing funding model functions...")
