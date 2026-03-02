@@ -1,7 +1,7 @@
 # Session Notes - FRS Pension Model Rationalization
 
-**Last Updated**: 2026-02-17 (Week 3 Tier 2 Migration COMPLETE ✓)
-**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 Migration COMPLETE ✓ | Week 3 Partial: 4/5 Tier 2 tables migrated (160/160 tests pass)
+**Last Updated**: 2026-03-02 (Week 4: merge upstream + tier_table migration)
+**Current Status**: Week 1 COMPLETE ✓ | Week 2 Tier 1 COMPLETE ✓ | Week 3 Tier 2 Partial: 5/6 Tier 2 tables migrated (160/160 tests pass)
 
 ---
 
@@ -37,13 +37,14 @@ design questions that are deferred while penmodel-only changes are in progress. 
 3. `pension_model_analysis.qmd` - overall plan and architecture (if deeper context needed)
 4. `data_structure_mapping_VERIFIED.md` - Week 1 results (reference only)
 
-**Current state (2026-02-17 end of session)**:
+**Current state (2026-03-02 end of session)**:
 - 160/160 tests pass
-- Week 2 Tier 1 (3 tables) + Week 3 Tier 2 (4 computed tables) migrated
+- Merged upstream/Rebuildmodel (Gang's 3 commits: _2 function files, component.xlsx, tier_table augmentation)
+- Week 2 Tier 1 (3 tables) + Week 3 Tier 2 (5 tables: dr, fas_period, reduce_factor, cola, tier_table) migrated
 - `ben_mult_lookup` migration blocked on pendata data quality (see OPEN_ISSUES #5)
-- Next: fix pendata `benefit_rules`, then investigate `tier_table` in pendata
+- Next: ben_mult_lookup approach (Option A: rebuild adapter using benmult_lookup())
 
-Then say: *"I see we're at Week 3, 160/160 tests pass. The next priority is fixing pendata's benefit_rules (tier_2/tier_3 completeness) to unblock ben_mult_lookup migration."*
+Then say: *"We're at Week 4, 160/160 tests pass. Upstream Rebuildmodel merged. tier_table is now the 5th Tier 2 table migrated. The remaining item is ben_mult_lookup (still using legacy; pendata benefit_rules format incompatible with adapter approach — need to redesign using benmult_lookup())."*
 
 ---
 
@@ -198,12 +199,25 @@ This preserves exact backward compatibility during the refactor.
 | `fas_period_lookup` | Plan provision | ✅ Done | tier_1=5yr, others=8yr |
 | `reduce_factor_lookup` | Plan provisions | ✅ Done | _norm→1, _early→formula, _vested/_non_vested→NA |
 | `cola_lookup` | `constants_assumptions_tbl` | ✅ Done | 4 COLA constants, 0 mismatches |
-| `ben_mult_lookup` | `benefit_rules` | ⚠️ Deferred | pendata data quality issues (see OPEN_ISSUES #5) |
+| `tier_table` | FRS plan rules | ✅ Done | Pure rule computation; 0 mismatches vs legacy |
+| `ben_mult_lookup` | `benefit_rules` | ⚠️ Deferred | pendata format incompatible with direct adapter (see below) |
 
-### Week 4 Preview:
-- Fix pendata `benefit_rules` data quality issues (tier_2 completeness, tier_3 missing)
-- Then activate `convert_benefit_rules_to_legacy()` adapter in FRS_new_workflow.R
-- Investigate `tier_table` (the 6th remaining legacy lookup) — trace data source in pendata
+### ben_mult_lookup: why the current adapter doesn't work
+
+Pendata's `benefit_rules` uses a rule-based overlap format (inequality join + `slice_max`).
+The legacy `ben_mult_lookup` is a pre-computed band format (non-overlapping ranges).
+`convert_benefit_rules_to_legacy()` expands tier statuses correctly but cannot bridge the
+format difference — the adapter output has 173 tier_1 rows vs 74 in legacy because of
+the overlap structure.
+
+**Selected approach (Option A)**: Rebuild adapter to use pendata's own `benmult_lookup()`
+function to compute ben_mult for all class/tier/age/yos/year combinations, producing
+a pre-computed table that matches legacy exactly.
+
+### Week 5 Preview:
+- Implement Option A: use `benmult_lookup()` from pendata to build a complete pre-computed
+  ben_mult table for all combinations, then verify it matches legacy exactly
+- After that: consider deferred Tier 1 tables (salary_headcount_table, separation_rate_table)
 
 ---
 
@@ -356,10 +370,10 @@ git push origin rebuild-test
 
 ---
 
-**Last session end**: 2026-02-17 (Week 3 Tier 2 migration partially complete)
+**Last session end**: 2026-03-02 (Week 4: merge upstream + tier_table migration)
 **Status**: ✅ 160/160 tests pass. All work committed and documented.
 **Git branch**: rebuild-test
-**Last commit**: `99d14a9` — "Tier 2: build 4 computed lookup tables from pendata constants (160/160 pass)"
+**Last commit**: `0477f80` — "Tier 2: build tier_table from FRS plan rules (160/160 pass)"
 
 ### pendata changes: NONE
 pendata was not modified at any point. The backward-compat patches live entirely in this repo.
@@ -375,8 +389,9 @@ Data quality issues found in pendata benefit_rules are documented in OPEN_ISSUES
 | `convert_salarygrowth_to_legacy()` | salarygrowth → salary_growth_table | ✅ Active (Tier 1) |
 | `convert_amortization_to_legacy()` | amortization_bases → current_amort_layers | ✅ Active (Tier 1) |
 | `convert_retirees_to_legacy()` | retirees → retiree_distribution | ✅ Active (Tier 1) |
-| `convert_benefit_rules_to_legacy()` | benefit_rules → ben_mult_lookup | ⚠️ Written, not active (pendata data quality) |
+| `convert_benefit_rules_to_legacy()` | benefit_rules → ben_mult_lookup | ⚠️ Written, not active (format incompatible) |
 | `build_dr_lookup()` | constants → dr_lookup | ✅ Active (Tier 2) |
 | `build_fas_period_lookup()` | plan provision → fas_period_lookup | ✅ Active (Tier 2) |
 | `build_reduce_factor_lookup()` | plan provisions → reduce_factor_lookup | ✅ Active (Tier 2) |
 | `build_cola_lookup()` | constants → cola_lookup | ✅ Active (Tier 2) |
+| `build_tier_table()` | FRS plan rules → tier_table | ✅ Active (Tier 2) |
