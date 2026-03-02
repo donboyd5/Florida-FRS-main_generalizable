@@ -630,3 +630,80 @@ build_cola_lookup <- function(params) {
     ) |>
     dplyr::select(tier_at_dist_age, yos, entry_year, cola)
 }
+
+
+#' Build tier_table from FRS plan rules
+#'
+#' Computes tier membership (tier_1/2/3 × norm/early/vested/non_vested) for
+#' every combination of class × entry_year × yos × age. Replaces the
+#' pre-computed table previously loaded from pendata params_env.
+#'
+#' Tier membership rules (FRS plan provisions):
+#'   Tier 1: entry_year < 2011
+#'   Tier 2: 2011 <= entry_year < new_year_  (new_year_ = 2024)
+#'   Tier 3: entry_year >= new_year_
+#'
+#' @param params List/environment with: entry_year_range_, yos_range_,
+#'   min_age_, max_age_, class_names_no_drop_frs_, new_year_
+#'
+#' @return tibble with columns: class, entry_year, yos, age, new_year, tier
+#'
+build_tier_table <- function(params) {
+  new_year <- params$new_year_
+
+  tidyr::expand_grid(
+    class      = params$class_names_no_drop_frs_,
+    entry_year = params$entry_year_range_,
+    yos        = params$yos_range_,
+    age        = params$min_age_:params$max_age_
+  ) |>
+    dplyr::mutate(
+      new_year = new_year,
+      tier = dplyr::case_when(
+        # ── Tier 1: entered before 2011 ──────────────────────────────────────
+        entry_year < 2011 & (
+          (class %in% c("special", "admin") &
+             (yos >= 25 | (age >= 55 & yos >= 6) | (age >= 52 & yos >= 25))) |
+          (yos >= 30 | (age >= 62 & yos >= 6))
+        ) ~ "tier_1_norm",
+
+        entry_year < 2011 & (
+          (class %in% c("special", "admin") & (yos >= 6 & age >= 53)) |
+          (yos >= 6 & age >= 58)
+        ) ~ "tier_1_early",
+
+        entry_year < 2011 & yos >= 6 ~ "tier_1_vested",
+        entry_year < 2011            ~ "tier_1_non_vested",
+
+        # ── Tier 2: entered 2011–(new_year-1) ────────────────────────────────
+        entry_year < new_year & (
+          (class %in% c("special", "admin") &
+             (yos >= 30 | (age >= 60 & yos >= 8))) |
+          (yos >= 33 | (age >= 65 & yos >= 8))
+        ) ~ "tier_2_norm",
+
+        entry_year < new_year & (
+          (class %in% c("special", "admin") & (yos >= 8 & age >= 56)) |
+          (yos >= 8 & age >= 61)
+        ) ~ "tier_2_early",
+
+        entry_year < new_year & yos >= 8 ~ "tier_2_vested",
+        entry_year < new_year            ~ "tier_2_non_vested",
+
+        # ── Tier 3: entered new_year or later ────────────────────────────────
+        (class %in% c("special", "admin") &
+           (yos >= 30 | (age >= 60 & yos >= 8))) |
+        (yos >= 33 | (age >= 65 & yos >= 8)) ~ "tier_3_norm",
+
+        (class %in% c("special", "admin") & (yos >= 8 & age >= 56)) |
+        (yos >= 8 & age >= 61)               ~ "tier_3_early",
+
+        yos >= 8                             ~ "tier_3_vested",
+        TRUE                                 ~ "tier_3_non_vested"
+      ),
+      # Derived columns used by _2 model functions
+      is_norm_retire_elig = tier %in% c("tier_1_norm", "tier_2_norm", "tier_3_norm"),
+      vested_at_term = grepl("vested", tier, fixed = TRUE) &
+        !grepl("non_vested", tier, fixed = TRUE)
+    )
+}

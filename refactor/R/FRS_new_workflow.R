@@ -46,19 +46,18 @@ params$get_fas <- function(salary_vec, fas_period) {
   RcppRoll::roll_mean(x, n = fas_period, align = "right", fill = NA_real_)
 }
 
-params$tier_table <- params$tier_table %>%
-  dplyr::mutate(
-    is_norm_retire_elig = tier %in% c("tier_1_norm", "tier_2_norm", "tier_3_norm"),
-    vested_at_term = grepl("vested", tier, fixed = TRUE) &
-      !grepl("non_vested", tier, fixed = TRUE)
-  )
-
 # --- TIER 1 MIGRATION: Load helpers and convert better structures to legacy format ---
 message("Loading helper functions and applying Tier 1 adapters...")
 source(fs::path(rdir, "FRS_helper_functions.R"))
 
 # Apply adapters to convert better structures to legacy format
 # This allows existing functions to work unchanged while using better pendata internally
+
+# tier_table: computed from FRS plan rules (replaces pendata pre-computed table)
+message("  Building tier_table from FRS plan rules (large table, may take a moment)...")
+params$tier_table <- build_tier_table(params)
+message("  ✓ Built tier_table from FRS plan rules")
+
 params$salary_growth_table  <- convert_salarygrowth_to_legacy(params$salarygrowth)
 message("  ✓ Migrated salary_growth_table from better structure 'salarygrowth'")
 
